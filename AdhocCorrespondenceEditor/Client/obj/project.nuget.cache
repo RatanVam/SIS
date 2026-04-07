@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "lmloQbv6l4s=",
+  "dgSpecHash": "H1gY2toVqYk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Client\\AdhocCorrespondenceEditor.Client.csproj",
+  "projectFilePath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Client\\AdhocCorrespondenceEditor.Client.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\562371\\.nuget\\packages\\dartsassbuilder\\1.0.0\\dartsassbuilder.1.0.0.nupkg.sha512",
     "C:\\Users\\562371\\.nuget\\packages\\microsoft.aspnet.webapi.client\\5.2.9\\microsoft.aspnet.webapi.client.5.2.9.nupkg.sha512",

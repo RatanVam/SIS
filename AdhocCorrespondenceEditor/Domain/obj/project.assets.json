@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Domain\\AdhocCorrespondenceEditor.Domain.csproj",
+      "projectUniqueName": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Domain\\AdhocCorrespondenceEditor.Domain.csproj",
       "projectName": "AdhocCorrespondenceEditor.Domain",
-      "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Domain\\AdhocCorrespondenceEditor.Domain.csproj",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Domain\\AdhocCorrespondenceEditor.Domain.csproj",
       "packagesPath": "C:\\Users\\562371\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Domain\\obj\\",
+      "outputPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
