@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "YlAK/xhzuYY=",
+  "dgSpecHash": "8gup/jBd8mc=",
   "success": true,
-  "projectFilePath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
+  "projectFilePath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\562371\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\562371\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",
@@ -201,9 +201,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'AutoMapper' 12.0.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x",
-      "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
+      "filePath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Server\\AdhocCorrespondenceEditor.Server.csproj",
       "libraryId": "AutoMapper",
       "targetGraphs": [
         "net8.0"

@@ -1920,11 +1920,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Service\\AdhocCorrespondenceEditor.Service.csproj",
+      "projectUniqueName": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Service\\AdhocCorrespondenceEditor.Service.csproj",
       "projectName": "AdhocCorrespondenceEditor.Service",
-      "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Service\\AdhocCorrespondenceEditor.Service.csproj",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Service\\AdhocCorrespondenceEditor.Service.csproj",
       "packagesPath": "C:\\Users\\562371\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Service\\obj\\",
+      "outputPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Service\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -1946,14 +1946,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Repository\\AdhocCorrespondenceEditor.Repository.csproj": {
-              "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Repository\\AdhocCorrespondenceEditor.Repository.csproj"
+            "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Repository\\AdhocCorrespondenceEditor.Repository.csproj": {
+              "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Repository\\AdhocCorrespondenceEditor.Repository.csproj"
             },
-            "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj": {
-              "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj"
+            "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj": {
+              "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj"
             },
-            "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj": {
-              "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj"
+            "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj": {
+              "projectPath": "C:\\Users\\562371\\source\\repos\\vm-prashant\\SIS\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj"
             }
           }
         }

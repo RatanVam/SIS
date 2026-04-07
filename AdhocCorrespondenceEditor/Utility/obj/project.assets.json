@@ -527,19 +527,6 @@
             "locale": "zh-Hant"
           }
         }
-      },
-      "AdhocCorrespondenceEditor.Shared/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v8.0",
-        "dependencies": {
-          "System.ServiceModel.Primitives": "6.0.0"
-        },
-        "compile": {
-          "bin/placeholder/AdhocCorrespondenceEditor.Shared.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/AdhocCorrespondenceEditor.Shared.dll": {}
-        }
       }
     }
   },
@@ -1300,17 +1287,12 @@
         "system.servicemodel.primitives.6.0.0.nupkg.sha512",
         "system.servicemodel.primitives.nuspec"
       ]
-    },
-    "AdhocCorrespondenceEditor.Shared/1.0.0": {
-      "type": "project",
-      "path": "../Shared/AdhocCorrespondenceEditor.Shared.csproj",
-      "msbuildProject": "../Shared/AdhocCorrespondenceEditor.Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net8.0": [
-      "AdhocCorrespondenceEditor.Shared >= 1.0.0",
       "AutoMapper >= 12.0.1",
+      "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj",
       "Microsoft.Extensions.Caching.Memory >= 8.0.1",
       "NJM.DotNetLibrary.Logging >= 5.0.0",
       "System.ServiceModel.Http >= 6.0.0"
@@ -1323,11 +1305,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "projectUniqueName": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
       "projectName": "AdhocCorrespondenceEditor.Utility",
-      "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
       "packagesPath": "C:\\Users\\562371\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\obj\\",
+      "outputPath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -1349,8 +1331,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj": {
-              "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj"
+            "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj": {
+              "projectPath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj"
             }
           }
         }
@@ -1409,6 +1391,15 @@
     }
   },
   "logs": [
+    {
+      "code": "NU1105",
+      "level": "Error",
+      "message": "Unable to find project information for 'C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj'. If you are using Visual Studio, this may be because the project is unloaded or not part of the current solution so run a restore from the command-line. Otherwise, the project file may be invalid or missing targets required for restore.",
+      "libraryId": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
     {
       "code": "NU1903",
       "level": "Warning",

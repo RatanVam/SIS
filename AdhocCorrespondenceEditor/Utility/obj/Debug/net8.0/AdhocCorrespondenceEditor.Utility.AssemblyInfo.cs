@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AdhocCorrespondenceEditor.Utility")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+52c79a87cdf6b147dd484e3c827f1795522d4cc4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+abe0926a33d237a5504f2cc5a96bbfcf13acb2a3")]
 [assembly: System.Reflection.AssemblyProductAttribute("AdhocCorrespondenceEditor.Utility")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AdhocCorrespondenceEditor.Utility")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
