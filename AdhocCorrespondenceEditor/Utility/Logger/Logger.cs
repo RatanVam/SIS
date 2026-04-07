@@ -37,6 +37,11 @@ namespace AdhocCorrespondenceEditor.Utility
 
         public static void LogESBData(string context, object esbResponse)
         {
+            if (esbResponse == null)
+                return;
+           
+
+            
             var emptyNamespaces = new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty });
             var type = esbResponse.GetType();
             var serializer = new XmlSerializer(type);
