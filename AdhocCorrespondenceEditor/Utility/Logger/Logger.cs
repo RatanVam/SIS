@@ -14,6 +14,11 @@ namespace AdhocCorrespondenceEditor.Utility
     {
         public static void Details(Shared.Log message)
         {
+
+            if (message == null)
+                return;
+            
+            
             switch (message.Category)
             {
 
