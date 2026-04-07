@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "VCpH7T+17XQ=",
-  "success": true,
-  "projectFilePath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+  "dgSpecHash": "b9taQ0LixQ0=",
+  "success": false,
+  "projectFilePath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\562371\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\562371\\.nuget\\packages\\microsoft.csharp\\4.7.0\\microsoft.csharp.4.7.0.nupkg.sha512",
@@ -33,12 +33,23 @@
   ],
   "logs": [
     {
+      "code": "NU1105",
+      "level": "Error",
+      "message": "Unable to find project information for 'C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj'. If you are using Visual Studio, this may be because the project is unloaded or not part of the current solution so run a restore from the command-line. Otherwise, the project file may be invalid or missing targets required for restore.",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "filePath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "libraryId": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Shared\\AdhocCorrespondenceEditor.Shared.csproj",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'AutoMapper' 12.0.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x",
-      "projectPath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "projectPath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\562371\\Docs\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
+      "filePath": "C:\\Users\\562371\\source\\repos\\ACE\\AdhocCorrespondenceEditor\\Utility\\AdhocCorrespondenceEditor.Utility.csproj",
       "libraryId": "AutoMapper",
       "targetGraphs": [
         "net8.0"

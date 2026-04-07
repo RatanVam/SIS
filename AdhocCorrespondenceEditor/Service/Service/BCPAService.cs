@@ -80,7 +80,8 @@ namespace AdhocCorrespondenceEditor.Service.ServiceClass
             try
             {
                 
-                retrieveInvoiceTransactions request = new ();
+                //retrieveInvoiceTransactions request = new ();
+                var request = new retrieveInvoiceTransactions();
                 request.retrieveInvoiceTransactionsIn = new();
                 request.retrieveInvoiceTransactionsIn.PolicyNumber = Details.PolicyNumber;
 
