@@ -1,0 +1,157 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using System.Text.RegularExpressions
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary" hidden=@hideControl>
+    <div class="panel-heading">
+          Fax Information
+    </div>
+        <div class="panel-body">
+            <div class="row" hidden = "@(indexCount==0)">
+                          <div class="col-md-3" >
+                                 Fax Subject:
+                              </div>
+                                <div class="col-md-6" >
+                                  <RadzenTextBox class="@LookupData.GetTextColorClass(EMAIL_SUBJECT, firstRendeValue)" @bind-Value=@EMAIL_SUBJECT MaxLength="50" 
+                                 Style="width: 100%; max-width: 400px;" />
+                                  </div>
+            </div>
+            <div style="margin-top: 15px">
+            @foreach(var fax in faxDetails)
+            {
+                     <div class=" row">
+                              <div class="col-md-3" >
+                                  Fax No.:
+                              </div>
+                              <div class="col-md-6" >
+                                 <RadzenTextBox Name="@("Fax")" @bind-Value=@fax.faxNo MaxLength="11"
+                                 onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" class="DropDownSize" />
+                              </div> </div>
+                              <div class=" row">
+                                 <div class="col-md-3" >
+                                   Recipient Name:</div>
+                                <div class="col-md-6" >
+                                  <RadzenTextBox Name="@("faxName")" @bind-Value=@fax.faxName MaxLength="50"  onkeypress="return (event.charCode !=8 && event.charCode ==0 ||event.charCode ==32 || ((event.charCode >= 48 && event.charCode <= 57) 
+                                       || (event.charCode >= 65 && event.charCode <= 90 ) || (event.charCode >= 97 && event.charCode <= 122 )))" class="DropDownSize" />
+                                  </div>
+                     </div>
+                     <hr />
+             }
+             </div>
+            <div class="row col-md-12">
+                <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount>maxRecords-1 ) />
+                <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount==0)/>
+            </div>
+         </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string printerID = string.Empty;
+    List<FaxDetails> faxDetails = new List<FaxDetails>();
+    string EMAIL_SUBJECT = "Requested NJM Information";
+
+    bool ishidden = false;
+    protected override async Task OnInitializedAsync()
+    {
+        EMAIL_SUBJECT = LookupData.configLookupEntity.Where(c => c.ConfigKey == nameof(EMAIL_SUBJECT)).FirstOrDefault()?.ConfigValue;
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        LookupData.HideFaxControl += new Action<bool>(HideFaxControl);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    bool hideControl = false;
+    void HideFaxControl(bool ishide)
+    {
+        if (ishide != hideControl)
+        {
+            faxDetails.Clear();
+            indexCount = 0;
+        }
+        hideControl = ishide;
+        if (hideControl)
+            LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+        else
+        {
+            LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        }
+        StateHasChanged();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((OutputBase)LookupData.UserSelection);
+
+        if (faxDetails.Count == 0)
+            return;
+        try
+        {
+            foreach(var fax in faxDetails)
+            {
+                if(!string.IsNullOrEmpty(fax.faxNo) && !string.IsNullOrEmpty(fax.faxName))
+                {
+                    userSelection.FaxAddress += GetFaxFormatedString(fax.faxNo?.Trim(), fax.faxName?.Trim());
+                }
+            }
+            userSelection.FaxSubject = EMAIL_SUBJECT?.Trim();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    string GetFaxFormatedString(string faxNo, string faxName)
+    {
+        faxNo = Regex.Replace(faxNo, "[^0-9]", "");
+        return $"/name={faxName?.Trim().Replace(" ","%20")}/fax={faxNo?.Trim()}@fax.njmgroup.com;";
+    }
+
+
+    int indexCount = 0;
+    int maxRecords = 3;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            faxDetails.Insert(indexCount,new FaxDetails());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            faxDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    class FaxDetails
+    {
+       public string faxNo = string.Empty;
+       public string faxName = string.Empty;
+    }
+
+}

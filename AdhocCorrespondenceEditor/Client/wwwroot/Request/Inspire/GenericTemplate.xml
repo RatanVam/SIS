@@ -1,0 +1,34 @@
+﻿<!-- Created with Liquid XML 2016 Designer Edition 14.1.5.6733 (https://www.liquid-technologies.com) --><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://www.gmc.net/Phoenix/Integration">
+	<soapenv:Header>
+		<wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+			<wsse:UsernameToken wsu:Id="UsernameToken-2" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+				<wsse:Username>System</wsse:Username>
+				<wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">pass</wsse:Password>
+			</wsse:UsernameToken>
+		</wsse:Security>
+	</soapenv:Header>
+	<soapenv:Body>
+		<int:CreateTicket2Request>
+			<int:Ticket>
+				<!--One or more repetitions for single or multiple documents in one ticket. -->
+				<int:Document>
+					<!--Enter the Inspire Content Manager path to the JLD file from which the ticket will be created. The path can contain further specification, e.g. state:label.If you only specify the file name, e.g. companyRoot://Templates/Vital_CS_GenericLetter.jld, it points to the head version of the file in Inspire Content Manager.-->
+					<int:Template>jldFilePlaceHolder</int:Template>
+					<int:DataDefinition>
+						<int:ModuleName>XMLDataInput1ExternalWorkflow1</int:ModuleName>
+						<int:Source>
+							<int:XmlData>serializeXMLPlaceHolder</int:XmlData>
+						</int:Source>
+					</int:DataDefinition>
+				</int:Document>
+				<int:Company>NJM</int:Company>
+				<int:State>S_CreateNewTicket</int:State>
+				<int:BusinessProcessRelativePath resolveDepartment="true">ticketJsonPlaceHolder</int:BusinessProcessRelativePath>
+				<int:Holder>
+					<int:UserName>userNamePlaceHolder</int:UserName>
+				</int:Holder>
+			</int:Ticket>
+		</int:CreateTicket2Request>
+	</soapenv:Body>
+</soapenv:Envelope>
+

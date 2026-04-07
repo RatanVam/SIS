@@ -1,0 +1,165 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        * Insured's Vehicle(s)
+    </div>
+    <div class="panel-body">
+
+        <div class="row TopMargin">
+           @foreach(var obj in vehicleList)
+            {
+                
+                <div class="col-md-12 TopMargin" >
+                    <RadzenSwitch Change="@(args => VehicleSelected(args, obj.VehicleId))"/> @($"{obj.ModelYearNr} {obj.VehicleTradeNm} {obj.ModelNm} {obj.ManufacturerVehicleIdentificationNr}")  
+                </div>
+                <div class="row" hidden=@(selectedVehicle?.Where(x=>x.vehicleID == obj.VehicleId).FirstOrDefault() == null)>
+                 <div class="col-md-1 TopMargin" >
+                </div>
+                <div class="col-md-11 TopMargin">
+                        @{var objVehicle=selectedVehicle?.Where(x=>x.vehicleID == obj.VehicleId).FirstOrDefault();
+                        if(objVehicle != null)
+                        {
+                    <RadzenRadioButtonList Data="@InsuredVehicleFinancelDetails" @bind-Value=@objVehicle.defaultSelection TValue="int" TextProperty="DocumentDropdownLookupItemCode" 
+                        ValueProperty="DocumentDropdownLookupItemId" Change="@(args => FinancelSelected(obj.VehicleId,args ))" />
+                    <div class="row">
+                                 @foreach(var ctl in objVehicle?.selectedList)
+                            {
+                                          <div class="col-md-6" style="border: thin solid black; margin-bottom: 20px"> <DynamicComponent Type="ctl" Parameters="@Parameters"  /> </div>
+                            }
+                        </div>               
+                            }}
+                     </div> 
+                     </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+    List<VehicleAssociationControls>  selectedVehicle = new List<VehicleAssociationControls>();
+    List<Vehicle> vehicleList = new();
+    IEnumerable<DocumentDropdownLookupDataEntity>  InsuredVehicleFinancelDetails;
+    string VehicleId = "VehicleId";
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add(VehicleId, string.Empty);
+        try
+        {
+            InsuredVehicleFinancelDetails = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(InsuredVehicleFinancelDetails), LookupData.documentData.documentEntity.DocumentId)}/"));
+            vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData?.Policy?.PolicyPeriod?.PolicyLines?.SelectMany(x => x?.PersonalAutoLine?.VehicleCoverageDetails)?.Select(y => y.Vehicle))?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (selectedVehicle.Count == 0)
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+        foreach (var obj in selectedVehicle)
+        {
+            var vehicle = vehicleList?.Where(x => x?.VehicleId == obj.vehicleID)?.FirstOrDefault();
+            if (vehicle != null)
+            {
+                var coverages = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Where(y => y.Vehicle.ManufacturerVehicleIdentificationNr == vehicle.ManufacturerVehicleIdentificationNr).SelectMany(y => y.Coverages);
+                userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                    {
+                        VehicleCoverageInd=true,
+                        CollisionDeductible = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() ==ApplicationConstants.Collision.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        CollisionPrem = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() == ApplicationConstants.PACollisionCov.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        LiabilityPrem = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() == ApplicationConstants.PALiabilityCov.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        OtherCollisionDeductible = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() == ApplicationConstants.Comprehensive.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        OtherCollisionPrem = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() == ApplicationConstants.PAComprehensiveCov.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        PipMedLimitPrem = coverages?.Where(x => x.CoverageTypeCd?.ToUpper() == ApplicationConstants.PAComprehensiveCov.ToUpper()).FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                        //StatedValue= vehicle.,
+                        VehicleBodyType = vehicle.ModelNm,
+                        VehicleTradeNm = vehicle.VehicleTradeNm,
+                        ModelYearNr = vehicle.ModelYearNr,
+                        ManufacturerVehicleIdentificationNr = vehicle.ManufacturerVehicleIdentificationNr,
+                        VehicleId = vehicle.VehicleId
+                    });
+            }
+        }
+    }
+
+    async void VehicleSelected(bool value, string vehicleId)
+    {
+        if (value)
+        {
+            var FinanceName = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails.Where(y => y.Vehicle.VehicleId == vehicleId && y.OwnershipTypeCd == "Financed")).SelectMany(z => z.AssociatedParties.Where(x => x.PartyRoles.Contains("Lien Holder") && x.PartyTypeCd == ApplicationConstants.Organization)).ToList();
+            var LeaseName = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails.Where(y => y.Vehicle.VehicleId == vehicleId && y.OwnershipTypeCd == "Leased")).SelectMany(z => z.AssociatedParties.Where(x => x.PartyRoles.Contains("Lessor") && x.PartyTypeCd == ApplicationConstants.Organization)).ToList();
+            var AdditionalInsuredName = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails.Where(y => y.Vehicle.VehicleId == vehicleId && y.OwnershipTypeCd == "Leased")).SelectMany(z => z.AssociatedParties.Where(x => x.PartyRoles.Contains("Lien Holder") && x.PartyTypeCd == ApplicationConstants.Organization)).ToList();
+            int defaultOption;
+            if (FinanceName.Count > 0)
+                defaultOption = InsuredVehicleFinancelDetails.ToList()[1].DocumentDropdownLookupItemId;//"Finance";
+            else if (AdditionalInsuredName.Count > 0 && LeaseName.Count > 0)
+                defaultOption = InsuredVehicleFinancelDetails.ToList()[3].DocumentDropdownLookupItemId;//"Additional";
+            else if (LeaseName.Count > 0)
+                defaultOption = InsuredVehicleFinancelDetails.ToList()[2].DocumentDropdownLookupItemId;//"Lease";
+            else defaultOption = InsuredVehicleFinancelDetails.ToList()[0].DocumentDropdownLookupItemId;//"Owned";
+
+            var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, defaultOption);
+            var objSelectedVehicle = new VehicleAssociationControls();
+            objSelectedVehicle.vehicleID = vehicleId;
+            objSelectedVehicle.defaultSelection = defaultOption;
+            foreach (var childControl in childControlList)
+            {
+                Parameters[VehicleId] = vehicleId;
+                objSelectedVehicle?.selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+            }
+            selectedVehicle.Add(objSelectedVehicle);
+        }
+        else
+            selectedVehicle.Remove(selectedVehicle.Where(x => x.vehicleID == vehicleId).FirstOrDefault());
+    }
+    async void FinancelSelected(string vehicleID,int childControlItemID)
+    {
+
+        StateHasChanged();
+        var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, childControlItemID);
+        var objVehicle = selectedVehicle.Where(x => x.vehicleID == vehicleID).FirstOrDefault();
+        objVehicle?.selectedList.Clear();
+        foreach (var childControl in childControlList)
+        {
+            Parameters[VehicleId] = vehicleID;
+            objVehicle?.selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+
+    class VehicleAssociationControls
+    {
+        public string vehicleID;
+        public List<Type> selectedList= new ();
+        public int defaultSelection;
+    }
+}

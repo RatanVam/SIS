@@ -1,0 +1,213 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+<div class="panel panel-primary" hidden="@(!isVisible)">
+    @*ng-show="showControl"*@
+    <div class="panel-heading">CC Section</div>
+    <div class="panel-body">
+        <!--section header-->
+        <div class="row">
+            <div class="col-md-1">
+                <label>CC</label>
+            </div>
+            <div class="col-md-1">
+                <label>BCC</label>
+            </div>
+            <div class="col-md-3">
+                <label>Name</label>
+            </div>
+            <div class="col-md-3">
+                <label>Address</label>
+            </div>
+            <div class="col-md-4">
+                <label>Reference</label>
+            </div>
+        </div>
+        <hr />
+        @foreach (var item in selectedList)
+        {
+            <div class="row">
+
+                <div class="col-md-1">
+                    <RadzenSwitch @bind-Value=@item.CCEnabled Change="@((args) => {item.BCCEnabled=false; ClearData(item);})" />
+                </div>
+                <div class="col-md-1">
+                    <RadzenSwitch @bind-Value=@item.BCCEnabled Change="@((args) => {item.CCEnabled = false; ClearData(item);})" />
+
+                </div>
+                <div class="col-md-3">
+                    <RadzenDropDown Change="@((args) => OnSelectedCCNameChange(args, item))" Disabled=@(!item.CCEnabled && !item.BCCEnabled) Data="@CCInfo" TValue="ControlClass.PartyAddressUI" TextProperty="DisplayName" ValueProperty="PartyID" Placeholder="--Select--"  
+                                class="@LookupData.GetTextColorClass((item.CCEnabled || item.BCCEnabled) && string.IsNullOrEmpty(item.PartyID), firstRendeValue)" Value="@item.PartyID" Style="width: 100%; max-width: 400px;" />
+                    <span class="alert-dangerMsg" hidden="@(!((item.CCEnabled || item.BCCEnabled) && CCInfo.Count == 0))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+                <div class="col-md-3">
+                    <RadzenDropDown Change=@((args) => OnSelectedCCAddressChange(args, item)) Disabled=@(!item.CCEnabled && !item.BCCEnabled) Data="@item.AddressData" TValue="ControlClass.Address" Placeholder="--Select--"   TextProperty="Line1Tx" ValueProperty="ID"
+                                Value="@item.AddressId" Style="width: 100%; max-width: 400px;">
+                        <Template>
+                            @($"({context.AddressUseCd}) {context.Attention} {context.Line1Tx} {context.Line2Tx} {context.Line3Tx} {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(!((item.CCEnabled || item.BCCEnabled) && !string.IsNullOrEmpty(item.PartyID) &&item.AddressData.Count == 0))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+                <div class="col-md-4">
+                    <RadzenTextBox Disabled=@(!item.CCEnabled && !item.BCCEnabled) @bind-Value=@item.References Style="width: 100%; max-width: 400px;" />
+                </div>
+            </div>
+            <hr />
+        }
+
+        <div class="col-md-12" style="margin-top:5px;">
+            <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;" hidden=@(indexCount == maxRecords ) />
+            <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;" hidden=@(indexCount==0) />
+        </div>
+    </div>
+</div>
+@code {
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    class CCDetails
+    {
+        public bool CCEnabled { get; set; }
+        public bool BCCEnabled { get; set; }
+        public string PartyID { get; set; }
+        public string AddressId { get; set; }
+        public string References { get; set; }
+        public List<ControlClass.Address> AddressData { get; set; } = new();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    List<PartyAddressUI> CCInfo = new();
+    int indexCount = 0;
+    int maxRecords = 10;
+    protected override async Task OnInitializedAsync()
+    {
+        CCInfo = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity).Where(x => !x.PartyRoles.Contains("OrganizationContact"))?.OrderBy(x=>x.DisplayName)?.ToList();
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        LookupData.HideCCBCControl += new Action<bool>(HideCCBCControl);
+
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    void ClearData(CCDetails cCDetails)
+    {
+        cCDetails.AddressId = string.Empty;
+        cCDetails.AddressData = new();
+        cCDetails.PartyID = string.Empty;
+        cCDetails.References = string.Empty;
+    }
+    bool isVisible = true;
+    void HideCCBCControl(bool hideControl)
+    {
+        isVisible = !hideControl;
+        StateHasChanged();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (!isVisible || selectedList?.Count ==0)
+            return;
+        if (selectedList.Any(x => (x.CCEnabled || x.BCCEnabled) && string.IsNullOrEmpty(x.PartyID)))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((ClaimsOutputBase)LookupData.UserSelection);
+        if (selectedList.Count > 0)
+        {
+
+            userSelection.CCDetails = selectedList.Select(x =>
+            {
+                var selectedParty = CCInfo.Where(y => y.PartyID == x.PartyID).FirstOrDefault();
+                var selectedAddress = selectedParty?.PartyAddresses?.Where(y => y.ID == x.AddressId)?.FirstOrDefault();
+                var cc = new CCDetail()
+                    {
+                        References = x.References?.Trim() ?? string.Empty,
+                        BCCEnabled = x.BCCEnabled ? "Y" : "N"
+
+                    };
+                if(selectedParty != null)
+                {
+                    cc.Name = selectedParty.DisplayName;
+                }
+                if (selectedAddress != null)
+                    cc.Address = new CCAddress()
+                        {
+                            Addr1 = selectedAddress.AddresseeNameLine1Tx,
+                            Addr2 = selectedAddress.AddresseeNameLine2Tx,
+                            City = selectedAddress.Municipality,
+                            State = selectedAddress.CountrySubdivision,
+                            Zip = selectedAddress.PostalCd,
+                            PostNet = selectedAddress.Barcode
+                        };
+                return cc;
+            }).ToList();
+        }
+    }
+
+    List<CCDetails> selectedList = new();
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            selectedList.Insert(indexCount, new CCDetails());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            selectedList.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+    async void OnSelectedCCAddressChange(object args, CCDetails cCDetails)
+    {
+        if (args == null)
+        {
+            cCDetails.AddressId = string.Empty;
+        }
+        else
+        {
+            cCDetails.AddressId = args.ToString();
+        }
+
+    }
+
+    async void OnSelectedCCNameChange(object args, CCDetails cCDetails)
+    {
+        cCDetails.AddressData = new();
+
+        if (args == null)
+        {
+            cCDetails.PartyID = string.Empty;
+            cCDetails.AddressId = string.Empty;
+        }
+        else
+        {
+            cCDetails.PartyID = args.ToString();
+            cCDetails.AddressData = CCInfo.Where(x => x.PartyID == cCDetails.PartyID).FirstOrDefault()?.PartyAddresses;
+            cCDetails.AddressId = cCDetails.AddressData.FirstOrDefault()?.ID;
+
+        }
+
+    }
+}

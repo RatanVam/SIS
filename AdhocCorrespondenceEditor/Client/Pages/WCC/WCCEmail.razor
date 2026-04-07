@@ -1,0 +1,197 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using System.Text.RegularExpressions
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Email
+    </div>
+    <div class="panel-body">
+    <div class="row" style="margin-top:15px;margin-bottom:5px">
+        <label class="col-md-6">* Select To Email Addresses</label>
+    </div>
+                    
+        <div class="row">
+            <div class="col-md-8">
+                <div class="table-bordered" style="padding: 5px;border: 1px solid;border-color:#ddd;">
+                    <div style="height:180px;overflow-y:auto;overflow-x:hidden">
+                        @foreach(var obj in partyList)
+                        {
+                            if (obj.ElectronicsDetails?.EmailAddress != null)
+                            {
+                                foreach (var objemail in obj.ElectronicsDetails?.EmailAddress)
+                                {
+                                    if (!string.IsNullOrEmpty(objemail))
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <label style="margin-left: 5px">
+                                                    <input type="checkbox" id=@("Email"+obj.PartyID + objemail) @onchange="eventArgs => { EmailSelected(objemail, eventArgs); }" style="margin-right: 5px" disabled = "@(!Utility.ValidateEmailUsingRegex(objemail))"/> 
+                                                    @($"{@obj.DisplayName} - {objemail}") </label>
+                                            </div>    
+                                            <div class="col-md-4" hidden="@Utility.ValidateEmailUsingRegex(objemail)">
+                                                <span class="alert-dangerMsg">Invalid email format</span>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            }
+                        }
+                        <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row col-md-6"><label>Enter Additional To Email Addresses:</label> </div>
+                @foreach(var emailValue in emailDetails)
+    {
+        <div class="row" style="margin-top: 5px">
+    <div class="col-md-6">
+            <RadzenTextBox Name="Email1" class="@LookupData.GetTextColorClass(((Utility.ValidateEmailUsingRegex(emailValue.email)))?"string":string.Empty,string.IsNullOrEmpty(emailValue.email))" @bind-Value=@emailValue.email
+            Style="width: 100%; max-width: 400px;" />
+    </div></div>
+    }
+
+            <div class="row col-md-12">
+                <RadzenButton id="EmailAddNewCC" Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" />
+                <RadzenButton id="EmailRemoveNewCC" Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount==0)/>
+            </div>
+            <hr/>
+         <div class="row">
+                <div class="col-md-3" >
+                    <label>* From Email:</label>
+                </div>
+                <div class="col-md-9" >
+                    <RadzenTextBox id ="EmailFrom" @bind-Value =@fromEmail class="@LookupData.GetTextColorClass(IsEmailSelected()?
+(((Utility.ValidateEmailUsingRegex(fromEmail)))&& !string.IsNullOrEmpty(fromEmail)?"string":string.Empty):"string", firstRendeValue)"Style="width: 100%; max-width: 400px;" />
+               </div>
+         </div>
+         <div class="row">
+                <div class="col-md-3" >
+                    <label>* Subject:</label>
+                </div>
+                <div class="col-md-9" >
+                    <RadzenTextBox id ="EmailSubject" @bind-Value =@subject class="@LookupData.GetTextColorClass(IsEmailSelected()? subject:"string", firstRendeValue)" Style="width: 100%; max-width: 400px;" />
+               </div>
+         </div>
+     </div>
+</div>
+@code{
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<string> selectedEmails = new List<string>();
+    public string fromEmail,subject;
+    List<EmailDetail> emailDetails = new List<EmailDetail>();
+    void EmailSelected(string email,ChangeEventArgs isSelected)
+    {
+        if ((bool)isSelected.Value)
+            selectedEmails.Add(email.ToString()?.Trim());
+        else
+            selectedEmails.Remove(email.ToString()?.Trim());
+    }
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        AuthorSelectedEmail(LookupData.EmailFromControl);
+        LookupData.SendEmailFromControl += new Action<string>(AuthorSelectedEmail);
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        partyList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity)?.OrderBy(x=>x.DisplayName)?.ToList();
+
+    }
+
+    bool IsEmailSelected()
+    {
+        return (selectedEmails.Count + emailDetails.Count) > 0;
+    }
+    string defaultEmail;
+    void AuthorSelectedEmail(string email)
+    {
+        fromEmail = email;
+        if (string.IsNullOrEmpty(defaultEmail))
+            defaultEmail = email;
+        StateHasChanged();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((OutputBase)LookupData.UserSelection);
+        userSelection.EmailAddress = string.Empty;
+
+        if (selectedEmails.Count == 0 && emailDetails.Count == 0)
+            return;
+        if (string.IsNullOrEmpty(fromEmail?.Trim()) || !Utility.ValidateEmailUsingRegex(fromEmail?.Trim()) || string.IsNullOrEmpty(subject?.Trim()))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        try
+        {
+            List<string> emails = new List<string>();
+            emails.AddRange(selectedEmails);
+            foreach (var email in emailDetails)
+            {
+                if (!Utility.ValidateEmailUsingRegex(email.email?.Trim()))
+                {
+                    LookupData.errorDetails.IsInValid = true;
+                    return;
+                }
+                if (!string.IsNullOrEmpty(email.email?.Trim()))
+                    emails.Add(email.email?.Trim());
+            }
+            emails.Add(string.Empty);
+            userSelection.EmailAddress = string.Join(";", emails);
+            userSelection.EmailFromAddress = fromEmail.Trim();
+            userSelection.EmailSubject = subject.Trim();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    int indexCount = 0;
+    public async void AddNewCCSection()
+    {
+
+        emailDetails.Insert(indexCount, new EmailDetail());
+        indexCount = indexCount + 1;
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            emailDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+    class EmailDetail
+    {
+        public string displayName = string.Empty;
+        public string email = string.Empty;
+    }
+}

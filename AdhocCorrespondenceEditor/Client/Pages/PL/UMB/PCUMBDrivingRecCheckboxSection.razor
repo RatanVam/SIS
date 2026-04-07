@@ -1,0 +1,74 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Driving Record
+    </div>
+    <div class="panel-body">
+        <div>
+            @foreach (var item in selectedList)
+            { 
+                <DynamicComponent Type="item" Parameters="@Parameters"  /> 
+            }
+            <div class="col-md-12">
+                <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px" hidden=@(indexCount>maxRecords-1 )/>
+                <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px" hidden=@(indexCount==0)/>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = 
+        new Dictionary<string, object>();
+    public int indexCount = 0;
+    int maxRecords = 3;
+    string controlName = "AdhocCorrespondenceEditor.Client.Shared.PCUMBDrivingRecCheckboxDetails";
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+    }
+
+    List<Type> selectedList= new ();
+    public async void AddNewCCSection()
+    {
+        if(indexCount < maxRecords)
+        {
+            indexCount = indexCount + 1;
+            selectedList.Add(Type.GetType(controlName));
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            selectedList.RemoveAt(indexCount);
+        }
+        StateHasChanged();
+    }
+
+}

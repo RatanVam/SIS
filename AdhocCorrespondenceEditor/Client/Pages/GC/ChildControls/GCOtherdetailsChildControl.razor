@@ -1,0 +1,49 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="col-md-12">
+    <RadzenTextBox id="OTHER_DETAILS1" @bind-Value=@OTHER_DETAILS1_VALUE Disabled=@isDisable class="DropDownSize300" MaxLength="150" />
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string OTHER_DETAILS1_VALUE = string.Empty;
+    bool isDisable = true;
+    protected override async Task OnInitializedAsync()
+    {
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        LookupData.GCParagraph += new Action<string,bool>(HideCCBCControl);
+    }
+
+    void HideCCBCControl(string tagname, bool isEnable)
+    {
+        if(nameof(OTHER_DETAILS1_VALUE) == tagname)
+            isDisable = !isEnable;
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (!isDisable)
+            ((GCUserEntity)LookupData.UserSelection).OtherDetails = OTHER_DETAILS1_VALUE;
+    }
+
+}

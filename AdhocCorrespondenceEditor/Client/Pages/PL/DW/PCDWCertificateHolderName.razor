@@ -1,0 +1,91 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Certificate Holder
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Certificate Holder Name
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown TValue="PartyAddressUI" class="@LookupData.GetTextColorClass(certificateHolderID, firstRendeValue)" Data=@partyList TextProperty="CertificateOfInsurance.CertificateHolderNm" ValueProperty="PartyId" Change=@(args => OnNameChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <div><span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span></div>                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string certificateHolderID;
+    List<Party> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            partyList = ((PLSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.PolicyLines.Select(x => x.HomeownersLine).SelectMany(y => y.ListedDwellings).SelectMany(z => z.AssociatedParties.Where(k => k.PartyRoles.Contains(ApplicationConstants.AdditionalInterestNoSpace) && k.CertificateOfInsurance != null)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(certificateHolderID))
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        var selectedDetails = partyList.Where(x => x.PartyId == certificateHolderID).FirstOrDefault();
+
+        if (selectedDetails != null)
+        {
+            userSelection.CertificateHolderDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address();
+            userSelection.CertificateHolderDetails.DisplayName = selectedDetails.CertificateOfInsurance?.CertificateHolderNm;
+            userSelection.CertificateLocationTx = selectedDetails.CertificateOfInsurance?.CertificateLocationTx;
+            var partyDetail = ((PLSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.ListedParties.Select(x => x.Party).Where(y=>y.PartyId==certificateHolderID).FirstOrDefault();
+            PartyAddress paryAddress;
+            paryAddress = (partyDetail.Organization == null) ? partyDetail.Person?.Addresses?.FirstOrDefault() : partyDetail.Organization?.Addresses?.FirstOrDefault();
+                userSelection.CertificateHolderDetails.Line1Tx = paryAddress?.Address?.Line1Tx;
+                userSelection.CertificateHolderDetails.Line2Tx = paryAddress?.Address?.Line2Tx;
+                userSelection.CertificateHolderDetails.Line3Tx = paryAddress?.Address?.Line3Tx;
+                userSelection.CertificateHolderDetails.MunicipalityNm = ApplicationClassUtility.GetMunicipalityByType(ApplicationConstants.CITY, paryAddress?.Address);
+                userSelection.CertificateHolderDetails.CountrySubdivisionNm = paryAddress?.Address?.CountrySubdivision?.CountrySubdivisionNm;
+                userSelection.CertificateHolderDetails.PostalCd = paryAddress?.Address?.PostalCd;
+        }
+    }
+    public async void OnNameChanged(object myArgs)
+    {
+        certificateHolderID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+
+
+}

@@ -1,0 +1,62 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          US Mail
+    </div>
+        <div class="panel-body">
+            <div class="row">
+                                <div class="col-md-4">
+                   <RadzenSwitch @bind-Value=@isUSMailSelected />
+                    @if (isUSMailSelected)
+                    {
+                        <label>Yes</label>
+                    }
+                    else
+                      {
+                        <label>No</label>
+                      }
+            </div>
+                      
+            </div>
+        </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    bool isUSMailSelected = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            ((OutputBase)LookupData.UserSelection).isUSMail = isUSMailSelected;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+}

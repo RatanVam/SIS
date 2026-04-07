@@ -1,0 +1,11 @@
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\bin\Debug\net6.0\AdhocCorrespondenceEditor.Domain.deps.json
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\bin\Debug\net6.0\AdhocCorrespondenceEditor.Domain.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\bin\Debug\net6.0\AdhocCorrespondenceEditor.Domain.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.AssemblyInfoInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.AssemblyInfo.cs
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.csproj.CoreCompileInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\refint\AdhocCorrespondenceEditor.Domain.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\AdhocCorrespondenceEditor.Domain.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Domain\obj\Debug\net6.0\ref\AdhocCorrespondenceEditor.Domain.dll

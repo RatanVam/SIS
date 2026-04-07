@@ -1,0 +1,138 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using AdhocCorrespondenceEditor.Shared.PCMulti
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Distribution/Underwriter Contact Info
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   Distribution Partner:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown class="DropDownSize" TValue="AccountRoleInformationDTO" Data=@DistributionPartnerInfo TextProperty="Name" ValueProperty="Name" Change=@(args => OnDistributionPartnerInfoChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                            @(string.IsNullOrEmpty(context.ProducerCode)?@context.Name: @context.Name + " - " + @context.ProducerCode)
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(DistributionPartnerInfo.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+            <div class="row margin-top-controls">
+                <div class="col-md-3">
+                   Distribution Rep:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown class="DropDownSize" TValue="AccountRoleInformationDTO" Data=@DistributionRepInfo TextProperty="Name" ValueProperty="Name" Change=@(args => OnDistributionRepInfoChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                            @(string.IsNullOrEmpty(context.ProducerCode)?@context.Name: @context.Name + " - " + @context.ProducerCode)
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(DistributionRepInfo.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+                <div class="row margin-top-controls">
+                    <div class="col-md-3">
+                       Underwriter:
+                    </div>
+                <div class="col-md-6">
+                    <RadzenDropDown class="DropDownSize" TValue="AccountRoleInformationDTO" Data=@UnderWriterInfo TextProperty="Name" ValueProperty="Name" Change=@(args => OnUnderWriterInfoChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                            @(string.IsNullOrEmpty(context.ProducerCode)?@context.Name: @context.Name + " - " + @context.ProducerCode)
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(UnderWriterInfo.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<AccountRoleInformationDTO> DistributionPartnerInfo = new List<AccountRoleInformationDTO>();
+    List<AccountRoleInformationDTO> DistributionRepInfo = new List<AccountRoleInformationDTO>();
+    List<AccountRoleInformationDTO> UnderWriterInfo = new List<AccountRoleInformationDTO>();
+    string distributionPartnerInfoID;
+    string distributionRepInfoID;
+    string underWriterInfoID;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            DistributionPartnerInfo = ((PCMultiSourceSystemEntity)(LookupData.SourceSystemEntity)).RetrieveAccountInformationResponseMessage.AccountInformation.DistributionPartnerInfo.ToList();
+            DistributionRepInfo = ((PCMultiSourceSystemEntity)(LookupData.SourceSystemEntity)).RetrieveAccountInformationResponseMessage.AccountInformation.DistributionRepInfo.ToList();
+            UnderWriterInfo = ((PCMultiSourceSystemEntity)(LookupData.SourceSystemEntity)).RetrieveAccountInformationResponseMessage.AccountInformation.UnderWriterInfo.ToList();
+        }
+        catch(Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    async void OnDistributionPartnerInfoChanged(object myArgs)
+    {
+        distributionPartnerInfoID = myArgs != null? myArgs.ToString():string.Empty;
+    }
+    async void OnDistributionRepInfoChanged(object myArgs)
+    {
+        distributionRepInfoID = myArgs != null? myArgs.ToString():string.Empty;
+    }
+    async void OnUnderWriterInfoChanged(object myArgs)
+    {
+        underWriterInfoID = myArgs != null? myArgs.ToString():string.Empty;
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((MultiUserEntity)LookupData.UserSelection);
+        if (!string.IsNullOrEmpty(distributionPartnerInfoID))
+        {
+            var selectedDP = DistributionPartnerInfo.Where(x => x.Name == distributionPartnerInfoID).FirstOrDefault();
+            userSelection.DistributionPartnerInfo.DisplayName = selectedDP.Name;
+            userSelection.DistributionPartnerInfo.Line1Tx = selectedDP.RoleAddress.AddressLine1;
+            userSelection.DistributionPartnerInfo.Line2Tx = selectedDP.RoleAddress.AddressLine2;
+            userSelection.DistributionPartnerInfo.Line3Tx = selectedDP.RoleAddress.AddressLine3;
+            userSelection.DistributionPartnerInfo.MunicipalityNm = selectedDP.RoleAddress.City;
+            userSelection.DistributionPartnerInfo.CountrySubdivisionNm = selectedDP.RoleAddress.State;
+            userSelection.DistributionPartnerInfo.PostalCd = selectedDP.RoleAddress.PostalCode;
+        }
+        if (!string.IsNullOrEmpty(distributionRepInfoID))
+        {
+            var selectedDR = DistributionRepInfo.Where(x => x.Name == distributionRepInfoID).FirstOrDefault();
+           userSelection.DistributionRepInfo.DisplayName = selectedDR.Name;
+           userSelection.DistributionRepInfo.Email = selectedDR.Email;
+           userSelection.DistributionRepInfo.Phone = selectedDR.Phone;
+        }
+        if (!string.IsNullOrEmpty(underWriterInfoID))
+        {
+            var selectedUW = UnderWriterInfo.Where(x => x.Name == underWriterInfoID).FirstOrDefault();
+            userSelection.UnderWriterInfoID.DisplayName = selectedUW.Name;
+            userSelection.UnderWriterInfoID.Email = selectedUW.Email;
+            userSelection.UnderWriterInfoID.Phone = selectedUW.Phone;
+        }
+        var accountHolderInfo = ((PCMultiSourceSystemEntity)(LookupData.SourceSystemEntity)).RetrieveAccountInformationResponseMessage.AccountInformation.AccountHolderContactInfo;
+        userSelection.AddresseeAddress.DisplayName = accountHolderInfo.Name;
+        userSelection.AddresseeAddress.Line1Tx = accountHolderInfo.RoleAddress.AddressLine1;
+        userSelection.AddresseeAddress.Line2Tx = accountHolderInfo.RoleAddress.AddressLine2;
+        userSelection.AddresseeAddress.Line3Tx = accountHolderInfo.RoleAddress.AddressLine3;
+        userSelection.AddresseeAddress.MunicipalityNm = accountHolderInfo.RoleAddress.City;
+        userSelection.AddresseeAddress.CountrySubdivisionNm = accountHolderInfo.RoleAddress.State;
+        userSelection.AddresseeAddress.PostalCd = accountHolderInfo.RoleAddress.PostalCode;
+    }
+}

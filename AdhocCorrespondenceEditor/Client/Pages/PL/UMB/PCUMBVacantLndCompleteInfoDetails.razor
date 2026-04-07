@@ -1,0 +1,96 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+
+                    <div class="row">
+                <div class="col-md-3">
+                   Vacant Land Address
+                </div>
+                 <div class="col-md-4">
+                     <RadzenDropDown class="DropDownSize300"   TValue="ControlClass.Address" Data=@partyList TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                        </Template>
+                    </RadzenDropDown>
+                </div>
+                 <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize300"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedAddressID))" MaxLength="150" />
+                </div>
+            </div>
+</div>
+
+
+<hr />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedAddressID = string.Empty;
+    string addressValue = string.Empty;
+    List<ControlClass.Address> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var partyRoles = ApplicationConstants.PLVacantLandType.Split(',').ToList();
+            var  locations = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.LocationExposures).Where(y => (partyRoles.Contains(y.LocationTypeCd)))).ToList();
+            partyList = PCUMBNamesAddress.GetAddress(locations);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.VacantLandInfo == null)
+            userSelection.VacantLandInfo = new();
+        if (string.IsNullOrEmpty(selectedAddressID) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+
+        string tempAddress = string.Empty;
+
+        if (string.IsNullOrEmpty(selectedAddressID))
+        {
+            tempAddress = addressValue?.Trim();
+        }
+        else
+        {
+            var selectedAddress = partyList.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.Line1Tx) ? string.Empty : selectedAddress.Line1Tx + ' ';
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.Line2Tx) ? string.Empty : selectedAddress.Line2Tx + ' ';
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.Line3Tx) ? string.Empty : selectedAddress.Line3Tx + ' ';
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.Municipality) ? string.Empty : selectedAddress.Municipality + ' ';
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.CountrySubdivision) ? string.Empty : selectedAddress.CountrySubdivision + ' ';
+            tempAddress += string.IsNullOrEmpty(selectedAddress?.PostalCd) ? string.Empty : selectedAddress.PostalCd + ' ';
+        }
+        userSelection.VacantLandInfo.Add(tempAddress);
+    }
+
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+        if(!string.IsNullOrEmpty(selectedAddressID))
+            addressValue = string.Empty;
+    }
+}

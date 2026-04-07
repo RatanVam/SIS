@@ -1,0 +1,93 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Claimant Name (Contacts One)
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+             @(isClaimantNameContactRequired? "* ":string.Empty)Claimant Name (Contacts):
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="ClaimantOne" TValue="PartyAddressUI" class="@LookupData.GetTextColorClass(partyID, firstRendeValue || !isClaimantNameContactRequired)" Data=@partyList TextProperty="DisplayName" 
+                    ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PartyAddressUI> partyList = new();
+    bool isClaimantNameContactRequired = false;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string primaryRolesExcept;
+            primaryRolesExcept = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(primaryRolesExcept), LookupData.documentData.documentEntity.DocumentId);
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(primaryRolesExcept))
+            {
+                var partyRoles = primaryRolesExcept.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Except(partyRoles).Count() > 0)?.OrderBy(x=>x.DisplayName)?.ToList();
+            }
+
+            isClaimantNameContactRequired = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(isClaimantNameContactRequired), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string partyID;
+    void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            partyID = myArgs == null ? string.Empty : myArgs.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID))
+        {
+            if (isClaimantNameContactRequired)
+                LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        ((GCUserEntity)LookupData.UserSelection).ClaimantNameContact = partyList.Where(x => x.PartyID == partyID).FirstOrDefault()?.DisplayName;
+
+    }
+}

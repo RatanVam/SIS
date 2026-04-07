@@ -1,0 +1,32 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.Pages
+@using AdhocCorrespondenceEditor.Shared.DTO.ACEEntity
+@inherits LayoutComponentBase
+@inject NavigationManager navManager
+@inject HttpClient Http
+
+<div class="page">
+
+    <main>
+<div  style="height:60px; background-color:#0079c1; text-align:center;color: white;font-size:larger; position:fixed;z-index:100;width:100%;">
+           <span style="float:left;text-align:right;padding-top:15px;padding-left:25px;">Adhoc Correspondence Editor</span>
+              <span style="float:right;padding-top:15px;padding-right:25px;padding-left:35px;">@UserDetail</span>
+          <img src="./favicon.png" style="float:inherit;height:50px;width:140px;padding-top:10px;">
+</div>
+        <div>
+            <CascadingValue Value="event_User">
+            @Body
+            </CascadingValue>
+        </div>
+    </main>
+</div>
+<Spinner></Spinner>
+@code
+{
+    public string UserDetail { get; set; } = "User";
+    EventCallback<string> event_User => EventCallback.Factory.Create(this, (Action<string>)NotifyUserName);
+    void NotifyUserName(string userName)
+    {
+        UserDetail = userName;
+    }
+}

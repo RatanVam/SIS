@@ -1,0 +1,218 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Re: Section
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                Label
+            </div>
+            <div class="col-md-6">
+                Reference
+            </div>
+        </div>
+        <hr />
+        <div class="row" hidden="@(!visiblepolicyNum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enablepolicyNum />Policy Number:
+            </div>
+            <div class="col-md-6">
+                @policyNum
+            </div>
+        </div>
+                <div class="row" hidden="@(!visibletxtMPCapplicant)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtMPCapplicant />MPC Applicant:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtMPCapplicant, firstRendeValue || !enabletxtMPCapplicant )" Disabled ="@(!enabletxtMPCapplicant)"  @bind-Value=@txtMPCapplicant MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtClaimPetNum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtClaimPetNum />Claim Petition Number:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtClaimPetNum, firstRendeValue || !enabletxtClaimPetNum )" Disabled ="@(!enabletxtClaimPetNum)"  @bind-Value=@txtClaimPetNum MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtStateNum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtStateNum />State ID Number:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtStateNum, firstRendeValue || !enabletxtStateNum )" Disabled ="@(!enabletxtStateNum)"  @bind-Value=@txtStateNum MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtDocketNum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtDocketNum  Visible="@(!hideSwitchDocketNum)"/>@lblDocketNumber
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtDocketNum, firstRendeValue || !enabletxtDocketNum )" Disabled ="@(!enabletxtDocketNum)"  @bind-Value=@txtDocketNum MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtListDate)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtListDate />Listing Date:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtListDate, firstRendeValue || !enabletxtListDate )" Disabled ="@(!enabletxtListDate)"  @bind-Value=@txtListDate MaxLength="30" Style="width: 100%; max-width: 400px;" /> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtNYWCBnum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtNYWCBnum Visible="@(!hideSwitchNYWCBnum)"/>@lblNYWCBNumber
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtNYWCBnum, firstRendeValue || !enabletxtNYWCBnum )" Disabled ="@(!enabletxtNYWCBnum)"  @bind-Value=@txtNYWCBnum MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                        <div class="row" hidden="@(!visibletxtRefNum)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtRefNum />Reference Number:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtRefNum, firstRendeValue || !enabletxtRefNum )" Disabled ="@(!enabletxtRefNum)"  @bind-Value=@txtRefNum MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+                                <div class="row" hidden="@(!visibletxtCMSCaseCtrl)">
+            <div class="col-md-3">
+                <RadzenSwitch @bind-Value=@enabletxtCMSCaseCtrl hidden="@true"/>* CMS Case Control Number:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="@LookupData.GetTextColorClass(txtCMSCaseCtrl, firstRendeValue || !enabletxtCMSCaseCtrl )" Disabled ="@(!enabletxtCMSCaseCtrl)"  @bind-Value=@txtCMSCaseCtrl MaxLength="30"  Style="width: 100%; max-width: 400px;"/> 
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string policyNum,txtMPCapplicant,txtClaimPetNum,txtStateNum,txtDocketNum,txtListDate ,txtNYWCBnum,txtRefNum,txtCMSCaseCtrl = string.Empty;
+    bool visiblepolicyNum, visibletxtMPCapplicant, visibletxtClaimPetNum, visibletxtStateNum, visibletxtDocketNum, visibletxtListDate, visibletxtNYWCBnum, visibletxtRefNum, visibletxtCMSCaseCtrl = false;
+    bool enablepolicyNum, enabletxtMPCapplicant, enabletxtClaimPetNum, enabletxtStateNum, enabletxtDocketNum, enabletxtListDate, enabletxtNYWCBnum, enabletxtRefNum, enabletxtCMSCaseCtrl = false;
+    bool hideSwitchDocketNum = false, hideSwitchNYWCBnum= false;
+
+    string lblDocketNumber = "Docket Number:";
+    string lblNYWCBNumber = "NY WCB Number:";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            policyNum = ((WCCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.ClaimPolicy.PolicyNumber;
+            visiblepolicyNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visiblepolicyNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtMPCapplicant = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtMPCapplicant), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtClaimPetNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtClaimPetNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtStateNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtStateNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtDocketNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtDocketNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtListDate = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtListDate), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtNYWCBnum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtNYWCBnum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtRefNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtRefNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            visibletxtCMSCaseCtrl = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(visibletxtCMSCaseCtrl), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+
+            enablepolicyNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enablepolicyNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtMPCapplicant = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtMPCapplicant), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtClaimPetNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtClaimPetNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtStateNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtStateNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtDocketNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtDocketNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtListDate = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtListDate), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtNYWCBnum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtNYWCBnum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtRefNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtRefNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            enabletxtCMSCaseCtrl = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(enabletxtCMSCaseCtrl), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+
+            hideSwitchDocketNum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(hideSwitchDocketNum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            hideSwitchNYWCBnum = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(hideSwitchNYWCBnum), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.FalseString.ToUpper() ? false : true;
+
+            if (hideSwitchDocketNum)
+                lblDocketNumber = "* " + lblDocketNumber;
+            if (hideSwitchNYWCBnum)
+                lblNYWCBNumber = "* " + lblNYWCBNumber;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+
+        if (enablepolicyNum)
+            if (string.IsNullOrEmpty(policyNum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.PolicyNum = policyNum;
+        if (enabletxtMPCapplicant)
+            if (string.IsNullOrEmpty(txtMPCapplicant))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.MPCapplicant = txtMPCapplicant;
+        if (enabletxtClaimPetNum)
+            if (string.IsNullOrEmpty(txtClaimPetNum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.ClaimPetNum = txtClaimPetNum;
+        if (enabletxtStateNum)
+            if (string.IsNullOrEmpty(txtStateNum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.StateNum = txtStateNum;
+        if (enabletxtDocketNum)
+            if (string.IsNullOrEmpty(txtDocketNum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.DocketNum = txtDocketNum;
+        if (enabletxtListDate)
+            if (string.IsNullOrEmpty(txtListDate))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.ListDate = txtListDate;
+        if (enabletxtNYWCBnum)
+            if (string.IsNullOrEmpty(txtNYWCBnum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.NYWCBnum = txtNYWCBnum;
+        if (enabletxtRefNum)
+            if (string.IsNullOrEmpty(txtRefNum))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.RefNum = txtRefNum;
+        if (enabletxtCMSCaseCtrl)
+            if (string.IsNullOrEmpty(txtCMSCaseCtrl))
+                LookupData.errorDetails.IsInValid = true;
+            else
+                userSelection.CMSCaseCtrl = txtCMSCaseCtrl;
+        userSelection.ClaimPetitionNumber = visibletxtClaimPetNum&&enabletxtClaimPetNum;
+    }
+
+}

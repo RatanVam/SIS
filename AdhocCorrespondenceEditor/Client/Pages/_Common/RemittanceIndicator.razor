@@ -1,0 +1,47 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-body">
+             <div class="row margin-top-controls">
+                     <div class="col-md-3">
+                        Remittance Indicator
+                      </div>
+                    <div class="col-md-6">
+                   <RadzenSwitch @bind-Value=@enabled />
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    bool enabled = false;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+
+        ((BCUserEntity)LookupData.UserSelection).RemittanceIndicator = enabled ? "Y" : "N";
+    }
+
+
+}

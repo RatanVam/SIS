@@ -1,0 +1,119 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+                    <div class="row">
+                <div class="col-md-3">
+                    Driver
+                </div>
+                 <div class="col-md-4">
+                    <RadzenDropDown class="DropDownSize300" TValue="PartyAddressUI" Data=@partyList Change=@(args => OnDriverChanged(args)) TextProperty="DisplayName" ValueProperty="PartyID" AllowClear=true  Placeholder="--Select--" >
+                    </RadzenDropDown>
+
+                </div>
+                 <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize300"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedDriver))" Change=@(args => OnTextChanged(args)) MaxLength="150" />
+                </div>
+            </div>
+                   <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@relationshipApplicant Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Relationship to Applicant </div>
+                   <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@licenseStatus Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> License Status </div></div>
+                   <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@ownInsurance Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Own Insurance </div>
+                   <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@dateofBirth Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Date of Birth </div></div>
+                   <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@dLNumberandState Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> DL Number and State </div>
+                   <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@yearFirstLicensed Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Year First Licensed </div></div>
+                   <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@priorDL Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Prior DL </div>
+                   <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@validDL Disabled ="@(string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue))"/> Valid DL </div></div>
+
+<hr />
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedDriver = string.Empty;
+    string addressValue = string.Empty;
+    List<PartyAddressUI> partyList = new();
+    bool relationshipApplicant,licenseStatus,ownInsurance,dateofBirth,dLNumberandState,yearFirstLicensed,priorDL,validDL;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var driverInfoTypes = ApplicationConstants.PLDriverInfoTypes.Split(',').ToList();
+            var  driverInfo = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.HouseholdMembers).Where(y => (driverInfoTypes.Contains(y.Person.VehicalDriverLicense.LicenseStatusCd)))).ToList();
+            partyList = PCUMBNamesAddress.GetPersonName(driverInfo);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.DriverDetails == null)
+            userSelection.DriverDetails = new();
+
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.DriveInfoDetails tempDireverDetails = new();
+
+        if (string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+        if (string.IsNullOrEmpty(selectedDriver))
+        {
+            tempDireverDetails.DriverName = addressValue?.Trim();
+        }
+        else
+        {
+            tempDireverDetails.DriverName = selectedDriver;
+        }
+
+        tempDireverDetails.RelationshipApplicant = relationshipApplicant;
+        tempDireverDetails.LicenseStatus = licenseStatus;
+        tempDireverDetails.OwnInsurance = ownInsurance;
+        tempDireverDetails.DateofBirth = dateofBirth;
+        tempDireverDetails.DLNumberandState = dLNumberandState;
+        tempDireverDetails.YearFirstLicensed = yearFirstLicensed;
+        tempDireverDetails.PriorDL = priorDL;
+        tempDireverDetails.ValidDL = validDL;
+
+        userSelection.DriverDetails.Add(tempDireverDetails);
+
+    }
+    public async void OnDriverChanged(object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            selectedDriver = string.Empty;
+        else
+            selectedDriver = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(selectedDriver))
+            addressValue = string.Empty;
+        else
+            ResetRadioButtons();
+    }
+    public async void OnTextChanged(object myArgs)
+    {
+        if (string.IsNullOrEmpty(selectedDriver)&& string.IsNullOrEmpty(addressValue) )
+        ResetRadioButtons();
+    }
+    async void ResetRadioButtons()
+    {
+        relationshipApplicant = licenseStatus = ownInsurance = dateofBirth = dLNumberandState = yearFirstLicensed = priorDL = validDL = false;
+    }
+
+}

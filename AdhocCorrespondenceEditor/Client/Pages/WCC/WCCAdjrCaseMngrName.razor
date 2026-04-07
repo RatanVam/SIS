@@ -1,0 +1,101 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Adjuster/Case Manager
+    </div>
+
+    <div class="panel-body">
+
+            <div class="row">
+                <div class="col-md-3">
+                    Adjuster/Case Manager Name:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+
+
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string partyID { set; get; }
+    List<PartyAddressUI> partyList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> wccAdjrCaseMngrRoles;
+            wccAdjrCaseMngrRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wccAdjrCaseMngrRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList(); ;
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(wccAdjrCaseMngrRoles.Contains))?.OrderBy(y=>y.DisplayName)?.ToList();
+
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnPartyChanged(object myArgs)
+    {
+        partyID = myArgs == null ? string.Empty : myArgs.ToString();
+
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        if (string.IsNullOrEmpty(partyID))
+        {
+            return;
+        }
+        var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+
+        if (selectedParty != null)
+        {
+            var faxDetails = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Fax.ToString()).FirstOrDefault();
+            var phoneDetails = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString()).FirstOrDefault();
+            userSelection.AdjrCaseMngrDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address
+                {
+                    DisplayName = selectedParty.DisplayName,
+                    FaxDetails = faxDetails==null?string.Empty:Utility.PhoneFormate(faxDetails?.AreaCode, faxDetails?.Exchange, faxDetails?.Number),
+                    Phone = phoneDetails==null?string.Empty:Utility.PhoneFormate(phoneDetails?.AreaCode, phoneDetails?.Exchange, phoneDetails?.Number),
+                    PhoneExtension = phoneDetails?.Extension,
+                    Credentials = selectedParty.Creds
+                };
+        }
+    }
+
+}

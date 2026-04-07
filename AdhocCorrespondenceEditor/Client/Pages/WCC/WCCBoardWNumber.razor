@@ -1,0 +1,81 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Board W
+    </div>
+
+    <div class="panel-body">
+
+            <div class="row">
+                <div class="col-md-3">
+                    Board W Number:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown TValue="string" Data=@BoardWNumbers 
+                    Change=@(args => OnNumbersChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(BoardWNumbers.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+
+
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string selectedWNumber { set; get; }
+    List<string> BoardWNumbers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> wccAdjrCaseMngrRoles;
+            wccAdjrCaseMngrRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wccAdjrCaseMngrRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList(); ;
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            BoardWNumbers =((WCCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.Matters.Select(x=>x.CaseNumber).Distinct().ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnNumbersChanged(object myArgs)
+    {
+        selectedWNumber = myArgs == null ? string.Empty : myArgs.ToString();
+
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((WCCUserEntity)LookupData.UserSelection).BoardWNumber = selectedWNumber;
+
+    }
+
+}

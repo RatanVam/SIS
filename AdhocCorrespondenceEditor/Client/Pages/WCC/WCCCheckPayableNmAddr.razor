@@ -1,0 +1,127 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Check Payable To
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   Payable To Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-3">
+                  Payable To Address:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown @ref="childComponent" TValue="ControlClass.Address" Data=@partyAddresses TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) 
+                        Value=@partyAddressID AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                        @($"({context.AddressUseCd}) {context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(partyAddresses.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+    List<PartyAddressUI> partyList = new();
+    List<ControlClass.Address> partyAddresses = new List<ControlClass.Address>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> wccPhysicianRoles = new List<string>();
+            wccPhysicianRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wccPhysicianRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(wccPhysicianRoles.Contains)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    string partyID, partyAddressID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                partyID = string.Empty;
+                partyAddresses = new List<ControlClass.Address>();
+            }
+            else
+            {
+                partyID = myArgs.ToString();
+                partyAddresses = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault().PartyAddresses;
+                partyAddressID = partyAddresses?.FirstOrDefault()?.ID;
+            }
+            if (string.IsNullOrEmpty(partyAddressID))
+                foreach (var cntl in components)
+                    cntl.Reset();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnAddressChanged(object myArgs)
+    {
+        partyAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID))
+            return;
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+
+        var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+        if (selectedParty != null)
+        {
+            var phoneDetails = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString() && x.IsPrimary).FirstOrDefault();
+            userSelection.PayableToDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address
+                {
+                    DisplayName = selectedParty.DisplayName,
+                };
+
+            var selectedAddress = selectedParty.PartyAddresses.Where(x => x.ID == partyAddressID).FirstOrDefault();
+            userSelection.PayableToDetails.Line1Tx = selectedAddress?.Line1Tx;
+            userSelection.PayableToDetails.Line2Tx = selectedAddress?.Line2Tx;
+            userSelection.PayableToDetails.Line3Tx = selectedAddress?.Line3Tx;
+            userSelection.PayableToDetails.MunicipalityNm = selectedAddress?.Municipality;
+            userSelection.PayableToDetails.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            userSelection.PayableToDetails.PostalCd = selectedAddress?.PostalCd;
+            userSelection.PayableToDetails.Phone = phoneDetails == null ? null : Utility.PhoneFormate(phoneDetails.AreaCode, phoneDetails.Exchange, phoneDetails.Number);
+
+        }
+    }
+}

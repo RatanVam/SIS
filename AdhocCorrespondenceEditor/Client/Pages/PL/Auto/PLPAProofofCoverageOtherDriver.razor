@@ -1,0 +1,128 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary" >
+    <div class="panel-heading">
+          Proof of Coverage for Other Driver
+    </div>
+        <div class="panel-body">
+
+        @foreach (var obj in otherDriverDetails)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                    Driver Name:
+                </div>
+                <div class="col-md-4">
+                    <RadzenDropDown class="DropDownSize" TValue="PartyAddressUI" Data=@partyList Change=@(args => OnDriverChanged(obj,args)) 
+                        ValueProperty="PartyID" TextProperty="DisplayName" AllowClear=true  Placeholder="--Select--" />
+                </div>
+                <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize" @bind-Value=@obj.InputDriverName Disabled ="@(!string.IsNullOrEmpty(obj.DriverName))" MaxLength="150" />
+                </div>
+            </div>
+            <hr />
+        }
+
+        <div class="col-md-12" style="margin-top: 15px">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<OtherDriver> otherDriverDetails = new List<OtherDriver>();
+
+
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        string plDriver;
+        var driverInfoTypes = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(plDriver), LookupData.documentData.documentEntity.DocumentId).Split(',');
+        var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+        partyList = partyFullList.Where(y => (driverInfoTypes.Any(y.PartyRoles.Contains)))?.OrderBy(x=>x.DisplayName)?.ToList();
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (otherDriverDetails.Count == 0)
+            return;
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.PolicyDriverDetails == null)
+                userDate.PolicyDriverDetails = new List<PolDriveInfo>();
+            foreach (var obj in otherDriverDetails)
+            {
+                userDate.PolicyDriverDetails.Add(new PolDriveInfo
+                    {
+                        DriverName = string.IsNullOrEmpty(obj.DriverName) ? obj.InputDriverName?.Trim() : obj.DriverName,
+                        ProofCovInd = true
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnDriverChanged(OtherDriver mvrObj, object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            mvrObj.DriverName = string.Empty;
+        else
+            mvrObj.DriverName = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(mvrObj.DriverName))
+            mvrObj.InputDriverName = string.Empty;
+    }
+
+
+    int indexCount = 0;
+    int maxRecords = 16;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            otherDriverDetails.Insert(indexCount,new OtherDriver());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            otherDriverDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    public class OtherDriver
+    {
+        public string DriverName { get; set; } = string.Empty;
+        public string InputDriverName { get; set; } = string.Empty;
+    }
+}

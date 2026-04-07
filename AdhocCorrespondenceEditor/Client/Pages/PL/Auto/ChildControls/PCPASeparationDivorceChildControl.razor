@@ -1,0 +1,106 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">
+         * Spouse/Partner Name:
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(selectedDriver, firstRendeValue)" @bind-Value="@selectedDriver" Style="width: 100%;max-width: 400px;"  MaxLength="74" />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+       * Vehicle:
+    </div>
+</div>
+<div class="row" style="margin-top: 2px">
+           @foreach(var obj in vehicleList)
+            {
+                
+                    <div class="col-md-12" style="margin-top: 2px">
+                   <RadzenSwitch Change="@(args => VehicleSelected(args, obj.VehicleId))"/> @($"{obj.ModelYearNr} {obj.VehicleTradeNm} {obj.ModelNm} {obj.ManufacturerVehicleIdentificationNr}")  
+                    </div>
+            }
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    string selectedDriver;
+    List<string>  selectedVehicle = new List<string>();
+    List<Vehicle> vehicleList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string[] spousePartnerName;
+            spousePartnerName =  ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(spousePartnerName),LookupData.documentData.documentEntity.DocumentId)?.Split(',');
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            selectedDriver = partyFullList.Where(y => (spousePartnerName.Any(y.PartyRoles.Contains)))?.FirstOrDefault()?.DisplayName;
+            vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Select(y => y.Vehicle)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedDriver) || selectedVehicle.Count == 0)
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+                var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        userSelection.SpouseParterName = selectedDriver;
+        if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+        foreach (var vehicleID in selectedVehicle)
+        {
+            var vehicle = vehicleList.Where(x => x.VehicleId == vehicleID).FirstOrDefault();
+            if (vehicle != null)
+            {
+                userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                    {
+                        ModelYearNr = vehicle.ModelYearNr,
+                        VehicleTradeNm = vehicle.VehicleTradeNm,
+                        ModelNm = vehicle.ModelNm,
+                        ManufacturerVehicleIdentificationNr = vehicle.ManufacturerVehicleIdentificationNr
+                    });
+            }
+        }
+    }
+
+    public async void VehicleSelected(bool value, string vehicleNumber)
+    {
+        if (value)
+            selectedVehicle.Add(vehicleNumber);
+        else
+            selectedVehicle.Remove(vehicleNumber);
+    }
+}

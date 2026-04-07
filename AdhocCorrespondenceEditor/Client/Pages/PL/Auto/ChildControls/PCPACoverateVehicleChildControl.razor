@@ -1,0 +1,114 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-5">
+        * Vehicle:
+    </div>
+    <div class="col-md-6">
+        <RadzenDropDown class="@LookupData.GetTextColorClass(selectedVehicle, firstRendeValue)"   TValue="Vehicle" Data=@vehicleList Change=@(args => OnVehicleChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 800px;" >
+             <Template>
+                        @($"{context.ModelYearNr} {context.VehicleTradeNm} {context.ModelNm} {context.ManufacturerVehicleIdentificationNr}")        
+                        </Template>
+                    </RadzenDropDown>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    string selectedVehicle;
+    List<Vehicle> vehicleList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Select(y => y.Vehicle)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedVehicle))
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+
+        var vehicle = vehicleList.Where(x => x.VehicleId == selectedVehicle).FirstOrDefault();
+        if (vehicle != null)
+        {
+            if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+
+            var vehicleCovereage = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Where(y => y.Vehicle.VehicleId == selectedVehicle)).FirstOrDefault();
+            var party = vehicleCovereage?.AssociatedParties.Where(x => x.PartyRoles.Contains(ApplicationConstants.LienHolder) && x.PartyTypeCd.ToUpper() == ApplicationConstants.Organization.ToUpper()).FirstOrDefault();
+            var address = party == null ? null : party?.Organization?.Addresses?.Where(x => x.PrimaryAddressIn.ToUpper() == bool.TrueString.ToUpper()).FirstOrDefault();
+            if (address == null)
+                address = party == null ? null :party?.Organization?.Addresses?.FirstOrDefault();
+            var partyLease = vehicleCovereage?.AssociatedParties.Where(x => x.PartyRoles.Contains(ApplicationConstants.Lessor) && x.PartyTypeCd.ToUpper() == ApplicationConstants.Organization.ToUpper()).FirstOrDefault();
+            var addressLeas = partyLease == null ? null : partyLease?.Organization?.Addresses?.Where(x => x.PrimaryAddressIn.ToUpper() == bool.TrueString.ToUpper()).FirstOrDefault();
+            if (addressLeas == null)
+                addressLeas = partyLease == null ? null : partyLease?.Organization?.Addresses?.FirstOrDefault();
+
+            userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                {
+                    ModelYearNr = vehicle.ModelYearNr,
+                    VehicleTradeNm = vehicle.VehicleTradeNm,
+                    ModelNm = vehicle.ModelNm,
+                    ManufacturerVehicleIdentificationNr = vehicle.ManufacturerVehicleIdentificationNr,
+                    CollisionDeductible = vehicleCovereage?.Coverages?.Where(x => x.CoverageTypeCd == "Collision").FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+                    OtherCollisionDeductible = vehicleCovereage?.Coverages?.Where(x => x.CoverageTypeCd == "Comprehensive").FirstOrDefault()?.CoverageParameterUnformattedValueTx,
+
+                    FinanceCpyName = party?.Organization?.OrganizationNm,
+                    FinanceCpyAddr1 = address?.Address?.Line1Tx,
+                    FinanceCpyAddr2 = address?.Address?.Line2Tx,
+                    FinanceCpyAddr3 = address?.Address?.Line3Tx,
+                    FinanceCpyCity = ApplicationClassUtility.GetMunicipalityByType(ApplicationConstants.CITY, address?.Address),
+                    FinanceCpyState = address?.Address?.CountrySubdivision?.CountrySubdivisionNm,
+                    FinanceCpyZip = address?.Address?.PostalCd,
+
+                    LeaseCoName = partyLease?.Organization?.OrganizationNm,
+                    LeaseCpyAddr1 = addressLeas?.Address?.Line1Tx,
+                    LeaseCpyAddr2 = addressLeas?.Address?.Line2Tx,
+                    LeaseCpyAddr3 = addressLeas?.Address?.Line3Tx,
+                    LeaseCpyCity = ApplicationClassUtility.GetMunicipalityByType(ApplicationConstants.CITY, addressLeas?.Address),
+                    LeaseCpyState = addressLeas?.Address.CountrySubdivision?.CountrySubdivisionNm,
+                    LeaseCpyZip = addressLeas?.Address.PostalCd
+                });
+        }
+    }
+
+    public async void OnVehicleChanged(object myArgs)
+    {
+        selectedVehicle = myArgs == null ? string.Empty : ((Vehicle)myArgs).VehicleId;
+    }
+
+}

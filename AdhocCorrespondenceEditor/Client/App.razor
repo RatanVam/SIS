@@ -1,0 +1,42 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.ACEEntity
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+<Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="@OnNavigateAsync">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+@code{
+    async Task OnNavigateAsync(NavigationContext args)
+    {
+        var appSetting  = await Http.GetFromJsonAsync<AppSettingEntity>(ApplicationConstants.UrlLookupGetAppSettings);
+        if (appSetting != null)
+        {
+            if(args.Path.ToLower().Contains("simulator") && !appSetting.ShowSimulator)
+
+                NavigationManager.NavigateTo("./Home");
+        }
+
+        if (args.Path.ToLower().Contains("admin"))
+        {
+            var user = await Http.GetFromJsonAsync<AdhocCorrespondenceEditor.Shared.UserData>(ApplicationConstants.UrlUser);
+            var response = await Http.PostAsJsonAsync<string>($"{ApplicationConstants.UrlReferenceDataLob}", user?.UserRoles ?? string.Empty);
+            var LOBEntities = (await response.Content.ReadFromJsonAsync<List<LOBEntity>>())?.OrderBy(y => y.LOBName)?.ToList(); 
+            if (!(user.IsAuthericated && LOBEntities?.Count > 0))
+            {
+                NavigationManager.NavigateTo("./Public/AccessDenied.html", true);
+                return;
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+PC-DW folder
+____________
+
+1. Table_change.sql
+2. GetRule.sql
+3  Data_migration_Common
+4  Data_Migration_Prod
+5  Rules_Data_DW
+
+PC-HOME folder
+______________
+
+3  Data_migration_Common
+4  Data_Migration_Prod
+5  Rules_Data_HO
+

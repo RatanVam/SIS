@@ -1,0 +1,156 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Additional Vehicle Information
+    </div>
+        <div class="panel-body">
+
+        @foreach (var obj in vehicleDetails)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                    Vehicle:   
+                </div>
+            <div class="col-md-8">
+                <RadzenDropDown   TValue="Vehicle" Data=@vehicleList Change=@(args => OnVehicleChanged(obj,args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 800px;" >
+                     <Template>
+                                @($"{context.ModelYearNr} {context.VehicleTradeNm} {context.ModelNm} {context.ManufacturerVehicleIdentificationNr}")        
+                                </Template>
+                            </RadzenDropDown>
+            </div>
+            </div>
+            <div class="row">
+             <div class="col-md-3">
+                </div>
+        @foreach(var reason in reasonVehicleOptionList)
+        {
+            <div class="col-md-3" style="margin-top: 2px">
+                <RadzenSwitch Change="@(args => OnVehicleOptionChanged(args, @reason.DocumentDropdownLookupItemValue,obj))" Style="margin-right:1px"/>  @reason.DocumentDropdownLookupItemCode  
+                    </div>
+        }
+         </div>
+            <hr />
+        }
+
+        <div class="col-md-12" style="margin-top: 15px">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<VehicleInformation> vehicleDetails = new List<VehicleInformation>();
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    List<DocumentDropdownLookupDataEntity>  reasonVehicleOptionList = new ();
+    List<Vehicle> vehicleList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData?.Policy?.PolicyPeriod?.PolicyLines?.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Select(y => y.Vehicle))?.ToList();
+        reasonVehicleOptionList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonVehicleOptionList), LookupData.documentData.documentEntity.DocumentId)}/"));
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (vehicleDetails.Count == 0 || vehicleList == null)
+            return;
+
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.VehicleDiscriptions == null)
+                userDate.VehicleDiscriptions = new List<VehicleDiscription>();
+            foreach (var obj in vehicleDetails)
+            {
+                var vehicle = vehicleList?.Where(x => x.VehicleId == obj.SelectedVehicleID).FirstOrDefault();
+                if (vehicle == null)
+                    continue;
+                userDate.VehicleDiscriptions.Add(new VehicleDiscription
+                    {
+                        ModelYearNr = vehicle == null ? short.MinValue : vehicle.ModelYearNr,
+                        VehicleTradeNm = vehicle?.VehicleTradeNm,
+                        ModelNm = vehicle?.ModelNm,
+                        ManufacturerVehicleIdentificationNr = vehicle?.ManufacturerVehicleIdentificationNr,
+                        VinInd = obj.VinInd,
+                        FinanceCompanyInd = obj.FinanceCompanyInd,
+                        LeaseCompanyInd = obj.LeaseCompanyInd
+
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    public async void OnVehicleChanged(VehicleInformation claimObj, object myArgs)
+    {
+        claimObj.SelectedVehicleID = myArgs == null? null:((Vehicle)myArgs).VehicleId.ToString();
+    }
+        public async void OnVehicleOptionChanged(bool isSelected, string myArgs, VehicleInformation claimObj)
+    {
+        Utility.UpdateValue(claimObj, myArgs, isSelected);
+
+    }
+
+    int indexCount = 0;
+    int maxRecords = 3;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            vehicleDetails.Insert(indexCount,new VehicleInformation());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            vehicleDetails.RemoveAt(indexCount);
+
+        }   
+        StateHasChanged();
+    }
+
+    public class VehicleInformation
+    {
+        public string SelectedVehicleID { get; set; }
+        public bool VinInd { get; set; }
+        public bool FinanceCompanyInd { get; set; }
+        public bool LeaseCompanyInd { get; set; }
+    }
+}

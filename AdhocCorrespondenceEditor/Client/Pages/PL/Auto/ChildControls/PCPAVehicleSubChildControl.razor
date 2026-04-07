@@ -1,0 +1,85 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row" style="margin-top: 2px">
+           @foreach(var obj in vehicleList)
+            {
+                
+                    <div class="col-md-12" style="margin-top: 2px">
+                   <RadzenSwitch Change="@(args => VehicleSelected(args, obj.VehicleId))"/> @($"{obj.ModelYearNr} {obj.VehicleTradeNm} {obj.ModelNm} {obj.ManufacturerVehicleIdentificationNr}")  
+                    </div>
+            }
+            </div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    List<string>  selectedVehicle = new List<string>();
+    List<Vehicle> vehicleList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy?.PolicyPeriod?.PolicyLines?.SelectMany(x => x.PersonalAutoLine?.VehicleCoverageDetails)?.Select(y => y.Vehicle))?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (selectedVehicle.Count == 0)
+            return;
+
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+        foreach (var vehicleID in selectedVehicle)
+        {
+            var vehicle = vehicleList.Where(x => x.VehicleId == vehicleID).FirstOrDefault();
+            if (vehicle != null)
+            {
+                userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                    {
+                        ModelYearNr = vehicle.ModelYearNr,
+                        VehicleTradeNm = vehicle.VehicleTradeNm,
+                        ModelNm = vehicle.ModelNm,
+                        ManufacturerVehicleIdentificationNr = vehicle.ManufacturerVehicleIdentificationNr,
+                        ControlType =  Reason
+                    });
+            }
+        }
+    }
+
+    public async void VehicleSelected(bool value, string vehicleNumber)
+    {
+                if (value)
+            selectedVehicle.Add(vehicleNumber);
+        else
+            selectedVehicle.Remove(vehicleNumber);
+    }
+
+}

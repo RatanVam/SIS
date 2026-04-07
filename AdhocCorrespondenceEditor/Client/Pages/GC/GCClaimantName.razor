@@ -1,0 +1,89 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Claimant
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                  Claimant Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="ClaimantNameOnly"  class="DropDownSize" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+                     Change=@(args => OnPartyChanged(args))  AllowClear=true Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<PartyAddressUI> partyList = new();
+    string displayName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string claimantRoles;
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles), LookupData.documentData.documentEntity.DocumentId);
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(claimantRoles))
+            {
+                var partyRoles = claimantRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Any(partyRoles.Contains))?.OrderBy(x=>x.DisplayName)?.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((GCUserEntity)LookupData.UserSelection).ClaimantNameAddress = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address
+            {
+                DisplayName = displayName
+            };
+    }
+
+    void OnPartyChanged( object myArgs)
+    {
+        try
+        {
+            displayName = myArgs == null ? string.Empty : partyList?.Where(x => x?.PartyID == myArgs.ToString()).FirstOrDefault()?.DisplayName;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+}

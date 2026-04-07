@@ -1,0 +1,350 @@
+﻿@page "/Admin"
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@inject NotificationService NotificationService
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+<RadzenDialog />
+<div style="top: 50px;
+    position: absolute; width:100%">
+    <h3 class="rz-text-align-center my-3"> Printer Configuration </h3>
+    <RadzenNotification />
+    <RadzenCard Variant="Variant.Outlined">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <div>LOB</div>
+            <RadzenDropDown id="LOBDropDown" @bind-Value="@selectedLOB" TextProperty="LOBName" ValueProperty="LOBName" Data="@LOBEntities" Change="@(OnLobChnaged)" Placeholder="--Select--"></RadzenDropDown>
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Text="Add/Edit Printer" Style="margin-left:auto" Click="@ShowPrinterConfigDialog"></RadzenButton>
+        </RadzenStack>
+    </RadzenCard>
+    <RadzenDataGrid @ref="printerGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true" EditMode="@editMode"
+                    Data="@printersByLOB" TItem="PrinterLookupEntity" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" Sort="@Reset" Page="@Reset" Filter="@Reset" ColumnWidth="200px">
+        <HeaderTemplate>
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Add New Printer" Click="@InsertNewPrinterRow" Disabled="@(ordersToInsert.Count() > 0 || string.IsNullOrEmpty(selectedLOB))" />
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Add Existing Printer" Click="@InsertExistingPrinterRow" Disabled="@(ordersToInsert.Count() > 0 || string.IsNullOrEmpty(selectedLOB))" />
+        </HeaderTemplate>
+        <Columns>
+            <RadzenDataGridColumn Property="PrinterName" Title="Printer Name" Width="200px">
+                <EditTemplate Context="printer">
+                    @{
+                        if (mode == Mode.AddExisting)
+                        {
+                            <RadzenDropDown Data="@printersNotInLOB" @bind-Value="@selectedPrinter" TextProperty="PrinterName" ValueProperty="PrinterId" Name="PrinterName" Change="@(() => OnPrinterChanged(printer))" Placeholder="--Select--" />
+                            <RadzenRequiredValidator Text="Printer name is required" Component="PrinterName" Popup="true" />
+                        }
+                        else if (mode == Mode.AddNew)
+                        {
+                            <RadzenTextBox @bind-Value="@printer.PrinterName" Name="PrinterName" Style="width:100%; display: block;" />
+                            <RadzenRequiredValidator Text="Printer name is required" Component="PrinterName" Popup="true" />
+                            <RadzenCustomValidator Component="PrinterName" Validator="@(() => ValidatePrinter(printer))" Text="Printer already exists" Popup="true" />
+
+                        }
+                        else
+                        {
+                            <RadzenText Text="@printer.PrinterName" Style="width:100%; display: block;" />
+                        }
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="PrinterCode" Title="Printer Code" Width="200px">
+                <EditTemplate Context="printer">
+                    @if (mode == Mode.AddNew)
+                    {
+                        <RadzenTextBox @bind-Value="@printer.PrinterCode" Name="PrinterCode" Style="width:100%; display: block;" />
+                        <RadzenRequiredValidator Text="Printer code is required" Component="PrinterCode" Popup="true" />
+
+                    }
+                    else
+                    {
+                        <RadzenText Text="@printer.PrinterCode" Name="PrinterCode" Style="width:100%; display: block;" />
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+
+            <RadzenDataGridColumn Property="CategoryFriendlyName" Title="Category" Width="180px" Visible="@(selectedLOB != null && supportedLOBToShowAdminColumn != null && supportedLOBToShowAdminColumn.Contains(selectedLOB))">
+                <EditTemplate Context="printer">
+                    <RadzenDropDown Data="@categories" @bind-Value="@printer.CategoryId" TextProperty="CategoryFriendlyName" ValueProperty="CategoryId" Name="Category" Change="@(() => OnCategoryChanged(printer))" AllowClear="true" Placeholder="--Select--" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="DocumentFriendlyName" Title="Document" Width="180px" Visible="@(selectedLOB != null && supportedLOBToShowAdminColumn != null && supportedLOBToShowAdminColumn.Contains(selectedLOB))">
+                <EditTemplate Context="printer">
+                    <RadzenDropDown Data="@documents" @bind-Value="@printer.DocumentId" TextProperty="DocumentFriendlyName" ValueProperty="DocumentId" Name="Document" AllowClear="true" Placeholder="--Select--" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Context="printer" Filterable="false" Sortable="false" TextAlign="TextAlign.Left" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                <Template Context="printer">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@(args => EditRow(printer))" Visible="@(selectedLOB != null && supportedLOBToShowAdminColumn != null && supportedLOBToShowAdminColumn.Contains(selectedLOB))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(printer))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="printer">
+                    <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(printer))" aria-label="Save">
+                    </RadzenButton>
+                    <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(printer))" aria-label="Cancel">
+                    </RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(printer))" aria-label="Delete">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</div>
+@code {
+    RadzenDataGrid<PrinterLookupEntity> printerGrid;
+    IEnumerable<PrinterLookupEntity> printersByLOB = new List<PrinterLookupEntity>();
+    IEnumerable<PrinterEntity> printersNotInLOB;
+    IEnumerable<PrinterEntity> printers;
+    IEnumerable<CategoryEntity> categories;
+    IEnumerable<DocumentEntity> documents;
+    int? selectedPrinter = null;
+    enum Mode
+    {
+        Edit,
+        AddNew,
+        AddExisting,
+        None
+    }
+    DataGridEditMode editMode = DataGridEditMode.Single;
+    List<PrinterLookupEntity> ordersToInsert = new List<PrinterLookupEntity>();
+    List<PrinterLookupEntity> ordersToUpdate = new List<PrinterLookupEntity>();
+    List<LOBEntity> LOBEntities;
+    string selectedLOB;
+    List<string> supportedLOBToShowAdminColumn;
+    AdhocCorrespondenceEditor.Shared.UserData _user;
+    Mode mode;
+    void Reset()
+    {
+        ordersToInsert.Clear();
+        ordersToUpdate.Clear();
+    }
+
+    async Task OnPrinterChanged(PrinterLookupEntity printer)
+    {
+        if (selectedPrinter == null) return;
+        var print = printersNotInLOB.Where(x => x.PrinterId == selectedPrinter)?.FirstOrDefault();
+        printer.PrinterCode = print.PrinterCode;
+        printer.PrinterName = print.PrinterName;
+        printer.PrinterId = selectedPrinter.Value;
+    }
+    async Task OnCategoryChanged(PrinterLookupEntity printer)
+    {
+        if (printer.CategoryId != null)
+            documents = (await Http.GetFromJsonAsync<List<DocumentEntity>>($"{ApplicationConstants.UrlReferenceDataDocument}{printer.CategoryId}/")).OrderBy(x => x.DocumentFriendlyName)?.ToList();
+        else
+            printer.DocumentId = null;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Http.GetFromJsonAsync<AdhocCorrespondenceEditor.Shared.UserData>(ApplicationConstants.UrlUser);
+        var response = await Http.PostAsJsonAsync<string>($"{ApplicationConstants.UrlReferenceDataLob}", _user?.UserRoles ?? string.Empty);
+        LOBEntities = (await response.Content.ReadFromJsonAsync<List<LOBEntity>>())?.OrderBy(y => y.LOBName)?.ToList();
+        printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+        mode = Mode.None;
+        var configLookupEntity = (await Http.GetFromJsonAsync<List<ConfigurationEntity>>($"{ApplicationConstants.UrlLookupconfiguration}"))?.ToList();
+
+        supportedLOBToShowAdminColumn = ApplicationClassUtility.GetVariableText(configLookupEntity, nameof(supportedLOBToShowAdminColumn))?.Split(",")?.ToList();
+    }
+    async Task OnLobChnaged(object LOBName)
+    {
+        if (LOBName == null)
+        {
+            selectedLOB = null;
+            return;
+        }
+        selectedLOB = LOBName.ToString();
+        printersByLOB = (await Http.GetFromJsonAsync<List<PrinterLookupEntity>>($"{ApplicationConstants.UrlLookupPrinter}{selectedLOB}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+
+
+        if (supportedLOBToShowAdminColumn != null && supportedLOBToShowAdminColumn.Contains(selectedLOB))
+        {
+            categories = (await Http.GetFromJsonAsync<List<CategoryEntity>>($"{ApplicationConstants.UrlReferenceDataCategory}"))?.Where(x => x.LOBName.ToUpper() == selectedLOB.ToUpper())?.OrderBy(y => y.CategoryFriendlyName)?.ToList();
+            printersNotInLOB = printers;
+        }
+        else
+        {
+            printersNotInLOB = printers.Where(x => !printersByLOB.Select(x => x.PrinterId).Contains(x.PrinterId))?.ToList();
+
+        }
+    }
+
+
+    void Reset(PrinterLookupEntity order)
+    {
+        ordersToInsert.Remove(order);
+        ordersToUpdate.Remove(order);
+    }
+    async Task EditRow(PrinterLookupEntity printer)
+    {
+        mode = Mode.Edit;
+        if (ordersToInsert.Count() > 0)
+        {
+            Reset();
+        }
+        await OnCategoryChanged(printer);
+        ordersToUpdate.Add(printer);
+        await printerGrid.EditRow(printer);
+    }
+    bool ValidatePrinter(PrinterLookupEntity printer)
+    {
+        return !printers.Any(x => x.PrinterName == printer.PrinterName && x.PrinterCode == printer.PrinterCode);
+    }
+
+    async Task OnUpdateRow(PrinterLookupEntity printer)
+    {
+        Reset(printer);
+        var response = await Http.PostAsJsonAsync<PrinterLookupRequest>($"{ApplicationConstants.UrlUpdatePrinterMap}", new PrinterLookupRequest()
+            {
+                PrinterName = printer.PrinterName,
+                CategoryId = printer.CategoryId,
+                DocumentId = printer.DocumentId,
+                PrinterCode = printer.PrinterCode,
+                LOBName = printer.LOBName,
+                LOBPrinterId = printer.LOBPrinterId,
+                UserId = _user.UserID
+            });
+        if (response.IsSuccessStatusCode)
+        {
+            printersByLOB = (await Http.GetFromJsonAsync<List<PrinterLookupEntity>>($"{ApplicationConstants.UrlLookupPrinter}{selectedLOB}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            printersNotInLOB = printers.Where(x => !printersByLOB.Select(x => x.PrinterId).Contains(x.PrinterId))?.ToList();
+            ShowNotification("Printer Uppdated successfully", NotificationSeverity.Success);
+        }
+        else
+        {
+            ShowNotification("Failed to update printer", NotificationSeverity.Error);
+
+        }
+    }
+
+    async Task SaveRow(PrinterLookupEntity printer)
+    {
+        await printerGrid.UpdateRow(printer);
+
+    }
+
+    void CancelEdit(PrinterLookupEntity printer)
+    {
+        Reset(printer);
+        printerGrid.CancelEditRow(printer);
+        mode = Mode.None;
+        selectedPrinter = null;
+
+    }
+
+    async Task DeleteRow(PrinterLookupEntity printer)
+    {
+        Reset(printer);
+
+        if (printersByLOB.Contains(printer))
+        {
+            var response = await Http.DeleteAsync($"{ApplicationConstants.UrlPrinterMap}?LOBPrinterId={printer.LOBPrinterId}&UserId={_user.UserID}");
+            if (response.IsSuccessStatusCode)
+            {
+                printersByLOB = (await Http.GetFromJsonAsync<List<PrinterLookupEntity>>($"{ApplicationConstants.UrlLookupPrinter}{selectedLOB}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+                printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+                printersNotInLOB = printers.Where(x => !printersByLOB.Select(x => x.PrinterId).Contains(x.PrinterId))?.ToList();
+                ShowNotification("Printer Deleted successfully", NotificationSeverity.Success);
+            }
+            else
+            {
+                ShowNotification("Failed to delete printer", NotificationSeverity.Error);
+
+            }
+        }
+        else
+        {
+            printerGrid.CancelEditRow(printer);
+
+            await printerGrid.Reload();
+        }
+        mode = Mode.None;
+        selectedPrinter = null;
+    }
+
+    public async Task ShowPrinterConfigDialog()
+    {
+        try
+        {
+
+            await DialogService.OpenAsync<PrinterConfigDialog>($"Add/Edit Printer",
+          new Dictionary<string, object>() { },
+          new DialogOptions()
+              {
+                  CloseDialogOnOverlayClick = true,
+                  Width = "1000px",
+                  Top = "20px",
+                  Height = "95%"
+              });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+    async Task InsertNewPrinterRow()
+    {
+        mode = Mode.AddNew;
+        Reset();
+        var printer = new PrinterLookupEntity();
+        printer.LOBName = selectedLOB;
+        printer.LOBType = "";
+        ordersToInsert.Add(printer);
+        await printerGrid.InsertRow(printer);
+    }
+    async Task InsertExistingPrinterRow()
+    {
+        mode = Mode.AddExisting;
+        Reset();
+
+        var printer = new PrinterLookupEntity();
+        printer.LOBName = selectedLOB;
+        printer.LOBType = "";
+        ordersToInsert.Add(printer);
+        await printerGrid.InsertRow(printer);
+    }
+
+    async Task OnCreateRow(PrinterLookupEntity printerLookupEntity)
+    {
+        var response = await Http.PostAsJsonAsync<PrinterLookupRequest>($"{ApplicationConstants.UrlAddPrinterMap}", new PrinterLookupRequest
+            {
+                PrinterName = printerLookupEntity.PrinterName,
+                CategoryId = printerLookupEntity.CategoryId,
+                DocumentId = printerLookupEntity.DocumentId,
+                PrinterCode = printerLookupEntity.PrinterCode,
+                LOBName = printerLookupEntity.LOBName,
+                LOBPrinterId = printerLookupEntity.LOBPrinterId,
+                UserId = _user.UserID
+            });
+        if (response.IsSuccessStatusCode)
+        {
+            printersByLOB = (await Http.GetFromJsonAsync<List<PrinterLookupEntity>>($"{ApplicationConstants.UrlLookupPrinter}{selectedLOB}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            printersNotInLOB = printers.Where(x => !printersByLOB.Select(x => x.PrinterId).Contains(x.PrinterId))?.ToList();
+            ShowNotification("Printer Added successfully", NotificationSeverity.Success);
+        }
+        else
+        {
+            ShowNotification("Failed to add printer", NotificationSeverity.Error);
+        }
+
+        ordersToInsert.Remove(printerLookupEntity);
+        mode = Mode.None;
+        selectedPrinter = null;
+    }
+    void ShowNotification(string message, NotificationSeverity severity)
+    {
+
+        NotificationService.Notify(new NotificationMessage
+            {
+                Severity = severity,
+                Duration = 10000,
+                SummaryContent = ns =>
+    @<RadzenText TextStyle="TextStyle.H6">@message</RadzenText>,
+        });
+
+    }
+}

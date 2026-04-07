@@ -1,0 +1,9 @@
+﻿@page "/Headers"
+
+<h3>Headers</h3>
+@{
+    foreach (var header in Request.Headers)
+    {
+        <div>@header.Key : @header.Value</div>
+    }
+}

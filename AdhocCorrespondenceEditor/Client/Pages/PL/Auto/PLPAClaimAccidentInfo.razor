@@ -1,0 +1,150 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Claim Information
+    </div>
+        <div class="panel-body">
+
+        @foreach (var obj in claimDetails)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                    * Claim Date:   
+                </div>
+                <div class="col-md-4">
+                     <RadzenDatePicker @bind-Value=@obj.ClaimDate class="@LookupData.GetTextColorClassCalander((obj.ClaimDate.HasValue)?"1":string.Empty, firstRendeValue)" 
+                DateFormat="yyyy-MM-dd" Change=@(args => OnClaimDateChanged(obj,args))  Style="width: 100%; max-width: 400px;" ShowCalendarWeek/>
+                </div>
+            </div>
+            <div class="row">
+              <div class="col-md-3"></div>
+  <div class="col-md-9" style="margin-top: 2px">      
+       <div class="row">
+      @foreach(var reason in reasonClaimAccList)
+        {
+            <div class="col-md-4">
+                <RadzenSwitch Change="@(args => OnClaimAccidentOptionChanged(args, @reason.DocumentDropdownLookupItemValue,obj))" Style="margin-right:1px"/>  @reason.DocumentDropdownLookupItemCode  
+        </div>
+        }
+                  </div>  </div>
+         </div>
+            <hr />
+        }
+
+        <div class="col-md-12" style="margin-top: 15px">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<ClaimInformation> claimDetails = new List<ClaimInformation>();
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    List<DocumentDropdownLookupDataEntity>  reasonClaimAccList = new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        reasonClaimAccList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonClaimAccList), LookupData.documentData.documentEntity.DocumentId)}/"));
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (claimDetails.Count == 0)
+            return;
+
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.ClaimInformation == null)
+                userDate.ClaimInformation = new List<ClaimAccInformation>();
+            foreach (var obj in claimDetails)
+            {
+                if(!obj.ClaimDate.HasValue)
+                {
+                    LookupData.errorDetails.IsInValid = isValidate;
+                    return;
+                }
+                userDate.ClaimInformation.Add(new ClaimAccInformation
+                    {
+                        ClaimDate = obj.ClaimDate.Value,
+                        DriverNmCheck= obj.DriverNmCheck,
+                         PoliceReportCheck= obj.PoliceReportCheck,
+                          InsLtrCheck= obj.InsLtrCheck
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    public async void OnClaimDateChanged(ClaimInformation claimObj, object myArgs)
+    {
+        claimObj.ClaimDate = myArgs == null? null:(DateTime)myArgs;
+    }
+    public async void OnClaimAccidentOptionChanged(bool isSelected, string myArgs, ClaimInformation claimObj)
+    {
+        Utility.UpdateValue(claimObj, myArgs, isSelected);
+
+    }
+
+    int indexCount = 0;
+    int maxRecords = 10;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            claimDetails.Insert(indexCount,new ClaimInformation());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            claimDetails.RemoveAt(indexCount);
+
+        }   
+        StateHasChanged();
+    }
+
+    public class ClaimInformation
+    {
+        public DateTime? ClaimDate { get; set; }
+        public bool DriverNmCheck { get; set; }
+        public bool PoliceReportCheck { get; set; }
+        public bool InsLtrCheck { get; set; }
+        }
+}

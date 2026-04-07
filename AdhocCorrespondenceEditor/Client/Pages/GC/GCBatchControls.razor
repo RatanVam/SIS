@@ -1,0 +1,77 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        @batchLableName
+    </div>
+    <div class="panel-body">
+            <div class="row" hidden ="@onlyCertifiedMailIndicator">
+                <div class="col-md-4">
+                    <RadzenSwitch id="PrintServicesBatch" @bind-Value=@isPrintServicesBatch  Change="@(args => OnPrintServicesChanged(args))"/>Print Services Batch
+                </div>
+                <div class="col-md-8">
+                    <span class="alert-dangerMsg">The Print Services Batch option should NOT be selected if the letter's attachments require manual processing.</span>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4" hidden = "@(isPrintServicesBatch)">
+                    <RadzenSwitch id="CertifiedMailIndicator" @bind-Value=@isCertifiedMailIndicator  />Certified Mail Indicator
+                </div>
+ </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string batchLableName = "Print Services";
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            batchLableName = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(batchLableName), LookupData.documentData.documentEntity.DocumentId);
+            onlyCertifiedMailIndicator = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(onlyCertifiedMailIndicator), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            isCertifiedMailIndicator = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(isCertifiedMailIndicator), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool isPrintServicesBatch,isCertifiedMailIndicator;
+    bool onlyCertifiedMailIndicator;
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+        userSelection.IsPrintServicesBatch = isPrintServicesBatch;
+        userSelection.IsCertifiedMailIndicator = isCertifiedMailIndicator;
+        userSelection.OnlyCertifiedMailIndicator = onlyCertifiedMailIndicator;
+    }
+    void OnPrintServicesChanged(bool value)
+    {
+        if (LookupData.HideCCBCControl != null)
+            LookupData.HideCCBCControl(value);
+
+        isCertifiedMailIndicator = false;
+    }
+}

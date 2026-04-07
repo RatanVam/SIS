@@ -1,0 +1,97 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32228.430
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Server", "Server\AdhocCorrespondenceEditor.Server.csproj", "{62EBAC72-D787-48B5-9417-FD1092E3FE80}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Client", "Client\AdhocCorrespondenceEditor.Client.csproj", "{8C1A969B-80FB-4DA5-98C6-8BBF92D04B2E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Shared", "Shared\AdhocCorrespondenceEditor.Shared.csproj", "{7F4FC3FA-B039-4EB0-A747-4355995E9849}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Repository", "Repository\AdhocCorrespondenceEditor.Repository.csproj", "{C4A7E7FA-BB53-44EC-B29A-207382CECA62}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Utility", "Utility\AdhocCorrespondenceEditor.Utility.csproj", "{078136CD-9CA7-4A18-99D7-7A8012B54518}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Domain", "Domain\AdhocCorrespondenceEditor.Domain.csproj", "{E7BE7629-6D5E-4AE1-A5C9-7CD2E76A24C9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Service", "Service\AdhocCorrespondenceEditor.Service.csproj", "{98830B9B-7F39-4EA2-B56F-0A710684399A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdhocCorrespondenceEditor.Test", "Test\AdhocCorrespondenceEditor.Test.csproj", "{7C4FB08E-54EE-4D44-8036-21C946175718}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{62EBAC72-D787-48B5-9417-FD1092E3FE80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62EBAC72-D787-48B5-9417-FD1092E3FE80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62EBAC72-D787-48B5-9417-FD1092E3FE80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62EBAC72-D787-48B5-9417-FD1092E3FE80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C1A969B-80FB-4DA5-98C6-8BBF92D04B2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C1A969B-80FB-4DA5-98C6-8BBF92D04B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C1A969B-80FB-4DA5-98C6-8BBF92D04B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C1A969B-80FB-4DA5-98C6-8BBF92D04B2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F4FC3FA-B039-4EB0-A747-4355995E9849}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F4FC3FA-B039-4EB0-A747-4355995E9849}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F4FC3FA-B039-4EB0-A747-4355995E9849}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F4FC3FA-B039-4EB0-A747-4355995E9849}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4A7E7FA-BB53-44EC-B29A-207382CECA62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4A7E7FA-BB53-44EC-B29A-207382CECA62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4A7E7FA-BB53-44EC-B29A-207382CECA62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4A7E7FA-BB53-44EC-B29A-207382CECA62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{078136CD-9CA7-4A18-99D7-7A8012B54518}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{078136CD-9CA7-4A18-99D7-7A8012B54518}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{078136CD-9CA7-4A18-99D7-7A8012B54518}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{078136CD-9CA7-4A18-99D7-7A8012B54518}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7BE7629-6D5E-4AE1-A5C9-7CD2E76A24C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7BE7629-6D5E-4AE1-A5C9-7CD2E76A24C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7BE7629-6D5E-4AE1-A5C9-7CD2E76A24C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7BE7629-6D5E-4AE1-A5C9-7CD2E76A24C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98830B9B-7F39-4EA2-B56F-0A710684399A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98830B9B-7F39-4EA2-B56F-0A710684399A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98830B9B-7F39-4EA2-B56F-0A710684399A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98830B9B-7F39-4EA2-B56F-0A710684399A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C4FB08E-54EE-4D44-8036-21C946175718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C4FB08E-54EE-4D44-8036-21C946175718}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C4FB08E-54EE-4D44-8036-21C946175718}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C4FB08E-54EE-4D44-8036-21C946175718}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {48DB19DA-6B1A-4A68-ABF3-50A5D6E7FCCC}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 9
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://tfspva1a01/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Service\\AdhocCorrespondenceEditor.Service.csproj
+		SccProjectName1 = Service
+		SccLocalPath1 = Service
+		SccProjectUniqueName2 = Server\\AdhocCorrespondenceEditor.Server.csproj
+		SccProjectName2 = Server
+		SccLocalPath2 = Server
+		SccProjectUniqueName3 = Client\\AdhocCorrespondenceEditor.Client.csproj
+		SccProjectName3 = Client
+		SccLocalPath3 = Client
+		SccProjectUniqueName4 = Shared\\AdhocCorrespondenceEditor.Shared.csproj
+		SccProjectName4 = Shared
+		SccLocalPath4 = Shared
+		SccProjectUniqueName5 = Repository\\AdhocCorrespondenceEditor.Repository.csproj
+		SccProjectName5 = Repository
+		SccLocalPath5 = Repository
+		SccProjectUniqueName6 = Utility\\AdhocCorrespondenceEditor.Utility.csproj
+		SccProjectName6 = Utility
+		SccLocalPath6 = Utility
+		SccProjectUniqueName7 = Domain\\AdhocCorrespondenceEditor.Domain.csproj
+		SccProjectName7 = Domain
+		SccLocalPath7 = Domain
+		SccProjectUniqueName8 = Test\\AdhocCorrespondenceEditor.Test.csproj
+		SccProjectName8 = Test
+		SccLocalPath8 = Test
+	EndGlobalSection
+EndGlobal

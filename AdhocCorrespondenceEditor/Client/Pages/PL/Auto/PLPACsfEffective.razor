@@ -1,0 +1,73 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@inject HttpClient Http
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        CSF Effective
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                 <div class="col-md-3">
+                   * CSF Effective
+                </div>
+                <div class="col-md-6">
+                    <RadzenDropDown class="@LookupData.GetTextColorClass(selectedCsfEffective, firstRendeValue)"  TValue="string" Data=@reasonListCsfEffective Change=@(args => OnReasonChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    IEnumerable<DocumentDropdownLookupDataEntity>  reasonListCsfEffective;
+
+    string selectedCsfEffective = string.Empty;
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            reasonListCsfEffective = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonListCsfEffective), LookupData.documentData.documentEntity.DocumentId)}/"));
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((PLPAUserEntity)LookupData.UserSelection).CsfEffective = selectedCsfEffective;
+    }
+    public async void OnReasonChanged(object myArgs)
+    {
+        selectedCsfEffective = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        if (myArgs != null)
+            LookupData.HideFaxControl(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode, LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper());
+    }
+
+}

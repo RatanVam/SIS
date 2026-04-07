@@ -1,0 +1,15 @@
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\bin\Debug\net8.0\AdhocCorrespondenceEditor.Repository.deps.json
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\bin\Debug\net8.0\AdhocCorrespondenceEditor.Repository.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\bin\Debug\net8.0\AdhocCorrespondenceEditor.Repository.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\bin\Debug\net8.0\AdhocCorrespondenceEditor.Shared.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\bin\Debug\net8.0\AdhocCorrespondenceEditor.Shared.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.csproj.AssemblyReference.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.AssemblyInfoInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.AssemblyInfo.cs
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.csproj.CoreCompileInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCor.93B48EB2.Up2Date
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\refint\AdhocCorrespondenceEditor.Repository.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\AdhocCorrespondenceEditor.Repository.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Repository\obj\Debug\net8.0\ref\AdhocCorrespondenceEditor.Repository.dll

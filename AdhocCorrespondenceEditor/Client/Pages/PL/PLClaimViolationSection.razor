@@ -1,0 +1,97 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary" hidden=@hideControl>
+    <div class="panel-heading">
+        Claim/Violation/Restoration Information
+    </div>
+    <div class="panel-body">
+        <div>
+            @foreach (var item in selectedList)
+            {
+                <DynamicComponent Type="item" Parameters="@Parameters" />
+            }
+            <div class="row col-md-12">
+                <RadzenButton class="AddRemoveButtons" Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+                <RadzenButton class="AddRemoveButtons" Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0) />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } =
+        new Dictionary<string, object>();
+    int indexCount = 0;
+    int maxRecords = 16;
+    string controlName = "AdhocCorrespondenceEditor.Client.Shared.PLClaimViolationDetail";
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", -1);
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        LookupData.HideClaimViolation += new Action<bool, int>(ShowHideClaimViolation);
+        ShowHideClaimViolation(!string.IsNullOrEmpty(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(hideControl), LookupData.documentData.documentEntity.DocumentId)));
+    }
+
+    bool hideControl = false;
+    void ShowHideClaimViolation(bool ishide, int dropDownID = -1)
+    {
+        Parameters["Reason"] = dropDownID;
+            selectedList.Clear();
+            indexCount = 0;
+        hideControl = ishide;
+        if (hideControl)
+            LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+        else
+        {
+            LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        }
+        StateHasChanged();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLOutputBase)LookupData.UserSelection);
+        if (userSelection.DrivingRecordDetails == null)
+            userSelection.DrivingRecordDetails = new();
+
+    }
+
+    List<Type> selectedList = new();
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            indexCount = indexCount + 1;
+            selectedList.Add(Type.GetType(controlName));
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            selectedList.RemoveAt(indexCount);
+        }
+        StateHasChanged();
+    }
+
+}

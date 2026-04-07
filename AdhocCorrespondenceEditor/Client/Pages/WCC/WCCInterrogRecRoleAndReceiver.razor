@@ -1,0 +1,169 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Interrogatories Receiver(s)
+    </div>
+         <div class="panel-body">
+     @foreach (var obj in interrogatoriesDetails)
+      {
+            <div class="row">
+            <div class="col-md-3">
+                Interrogatories Receiver Role #@obj.index:
+            </div>
+            <div class="col-md-9">
+                     <RadzenDropDown TValue="string" Data=@roles 
+                Change=@(args => OnRoleChanged(obj, args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                <span class="alert-dangerMsg" hidden="@(roles.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                Interrogatories Receiver #@obj.index:
+            </div>
+            <div class="col-md-9">
+                     <RadzenDropDown TValue="PartyAddressUI" Data=@obj.PartyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(obj,args)) AllowClear=true  
+                       Value=@obj.PartyID  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                <span class="alert-dangerMsg" hidden="@(obj.PartyList.Count > 0 || string.IsNullOrEmpty(obj.RoleName))">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+    <hr/>
+    }
+            <div class="row col-md-12">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+    </div>
+        </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    int index = 0;
+    List<PartyAddressUI> partyList = new();
+    List<string> roles = new();
+    List<Interrogatories> interrogatoriesDetails = new List<Interrogatories>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            partyList = ((new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity))?.Where(x=>x.PartyRoles.Contains("Other") == false)?.ToList();
+            roles = partyList.SelectMany(x => x.PartyRoles).Distinct().OrderBy(x=>x).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnRoleChanged(Interrogatories interrogatorie, object myArgs)
+    {
+        try
+        {
+
+            if (myArgs == null)
+            {
+                interrogatorie.RoleName = string.Empty;
+                interrogatorie.PartyList = new();
+            }
+            else
+            {
+                interrogatorie.RoleName = myArgs.ToString();
+                interrogatorie.PartyList = partyList.Where(x => x.PartyRoles.Contains(interrogatorie.RoleName)).ToList();
+                if (interrogatorie.PartyList?.Count == 1)
+                    interrogatorie.PartyID = interrogatorie.PartyList?.FirstOrDefault()?.PartyID;
+            }
+            if (string.IsNullOrEmpty(interrogatorie.PartyID))
+                foreach (var cntl in interrogatorie.components)
+                    cntl.Reset();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnPartyChanged(Interrogatories interrogatorie,object myArgs)
+    {
+        if (myArgs == null)
+            interrogatorie.PartyID  = string.Empty; 
+        else
+            interrogatorie.PartyID = myArgs.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        if (interrogatoriesDetails.Count > 0)
+            userSelection.Interrogatories = new();
+        else return;
+        foreach (var obj in interrogatoriesDetails)
+        {
+            if (string.IsNullOrEmpty(obj.RoleName))
+                continue;
+
+            var selectedParty = partyList.Where(x => x.PartyID == obj.PartyID).FirstOrDefault();
+            if (selectedParty != null)
+            {
+                userSelection.Interrogatories.Add(selectedParty.DisplayName);
+            }
+        }
+    }
+    int indexCount = 0;
+    int maxRecords = 5;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            interrogatoriesDetails.Insert(indexCount,new Interrogatories(interrogatoriesDetails.Count));
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            interrogatoriesDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+    public class Interrogatories
+    {
+        public Interrogatories(int count)
+        {
+            index = ++count;
+        }
+        public int index { set; get; } = 0;
+        public RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+        public List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+
+        public string RoleName { set; get; }
+        public string PartyID { set; get; }
+        public List<PartyAddressUI> PartyList = new();
+    }
+
+}

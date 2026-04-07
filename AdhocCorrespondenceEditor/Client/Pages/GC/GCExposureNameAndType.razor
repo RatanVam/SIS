@@ -1,0 +1,367 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using System.Text.RegularExpressions
+@using System.Reflection
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Exposure Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Exposure Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown Name="ExposureName" class="@LookupData.GetTextColorClass(partyID,firstRendeValue)" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" id="ExposureName"
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-3">
+                  * Exposure Type:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown Name="ExposureYype" @ref="childComponent" TValue="AdhocCorrespondenceEditor.Shared.GC.Exposure" TextProperty="ExposureType" Data=@partyExposure  ValueProperty="id" Change=@(args => OnExposureChanged(args)) 
+				  id="ExposureType" class="@LookupData.GetTextColorClass(partyExposureID.HasValue?bool.TrueString:string.Empty,firstRendeValue)" Value=@partyExposureID  AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                   <Template>
+                        @($"{context.ExposureType}") 
+                       </Template>
+                   </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(partyExposure.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        @if (partyExposureID.HasValue && partyExposureID != 0)
+        {
+            <div class="row" hidden = "@(!showCashValue)">
+                <div class="col-md-3">
+                    Vehicle Actual Cash Value: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="CashValue" @bind-Value=@txtCashValue MaxLength="15" onchange="@ChangeValue(txtCashValue,nameof(txtCashValue))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showOldDamageAmt)">
+                <div class="col-md-3">
+                    Vehicle Old Damage Amount: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="OldDamageAmt" @bind-Value=@txtOldDamageAmt MaxLength="15" onchange="@ChangeValue(txtOldDamageAmt,nameof(txtOldDamageAmt))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageSubTotal)">
+                <div class="col-md-3">
+                    Salvage Sub Total: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="SalvageSubTotal" @bind-Value=@txtSalvageSubTotal MaxLength="15" onchange="@ChangeValue(txtSalvageSubTotal,nameof(txtSalvageSubTotal))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showTaxAmount)">
+                <div class="col-md-3">
+                    Tax Amount: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="TaxAmount"  @bind-Value=@txtTaxAmount MaxLength="15" onchange="@ChangeValue(txtTaxAmount,nameof(txtTaxAmount))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageValue)">
+                <div class="col-md-3">
+                    Salvage Value: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="" @bind-Value=@txtSalvageValue MaxLength="15" onchange="@ChangeValue(txtSalvageValue,nameof(txtSalvageValue))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvagePDDed)">
+                <div class="col-md-3">
+                    Salvage PD Deductible: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox Name="SalvagePDDed" @bind-Value=@txtSalvagePDDed MaxLength="15" onchange="@ChangeValue(txtSalvagePDDed,nameof(txtSalvagePDDed))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageOther)">
+                <div class="col-md-3">
+                    Salvage Other: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="SalvageOther" @bind-Value=@txtSalvageOther MaxLength="15" onchange="@ChangeValue(txtSalvageOther,nameof(txtSalvageOther))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageNetSet)">
+                <div class="col-md-3">
+                    Salvage Net Settlement: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox Name="SalvageNetSet" @bind-Value=@txtSalvageNetSet MaxLength="15" onchange="@ChangeValue(txtSalvageNetSet,nameof(txtSalvageNetSet))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageVehYear)">
+                <div class="col-md-3">
+                    Salvage Vehicle Year:
+                </div>
+                <div class="col-md-6">
+                    <RadzenNumeric id="SalvageVehYear" ShowUpDown="false" class ="DropDownSize" TValue="string" @bind-Value=@txtSalvageVehYear Placeholder="####" Max="9999"  ReadOnly =@isReceivedYear/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageVehMake)">
+                <div class="col-md-3">
+                    Salvage Vehicle Make:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="SalvageVehMake" @bind-Value=@txtSalvageVehMake MaxLength="40" onchange="@ChangeValue(txtSalvageVehMake,nameof(txtSalvageVehMake))" class = "DropDownSize" ReadOnly =@isReceivedMake/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageVehModel)">
+                <div class="col-md-3">
+                    Salvage Vehicle Model:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="SalvageVehModel" @bind-Value=@txtSalvageVehModel MaxLength="40" onchange="@ChangeValue(txtSalvageVehModel,nameof(txtSalvageVehModel))" class = "DropDownSize" ReadOnly =@isReceivedModel/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showTotalLossEst)">
+                <div class="col-md-3">
+                    Total Loss Vehicle Estimate Amount: $
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="TotalLossEst" @bind-Value=@txtTotalLossEst MaxLength="15" onchange="@ChangeValue(txtTotalLossEst,nameof(txtTotalLossEst))" class = "DropDownSize" Placeholder="####.##" 
+                    onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+                </div>
+            </div>
+            <div class="row" hidden = "@(!showSalvageTypeLoss)">
+                <div class="col-md-3">
+                 Salvage Type Loss:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox id="SalvageTypeLoss" @bind-Value=@txtSalvageTypeLoss MaxLength="17" onchange="@ChangeValue(txtSalvageTypeLoss,nameof(txtSalvageTypeLoss))" class = "DropDownSize" ReadOnly =@isReceivedSalvageType/>
+                </div>
+            </div>
+            }
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>> components = new List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>>();
+    List<PartyAddressUI> partyList = new();
+    List<Exposure> partyExposure = new List<Exposure>();
+
+    bool showCashValue = false;        //Vehicle Actual Cash Value: $
+    bool showOldDamageAmt = false;     //Vehicle Old Damage Amount: $
+    bool showSalvageSubTotal = false;  //Salvage Sub Total: $
+    bool showTaxAmount = false;        //Tax Amount: $
+    bool showSalvageValue = false;     //Salvage Value: $
+    bool showSalvagePDDed = false;     //Salvage PD Deductible: $
+    bool showSalvageOther = false;     //Salvage Other: $
+    bool showSalvageNetSet = false;    //Salvage Net Settlement: $
+    bool showSalvageVehYear = false;   //Salvage Vehicle Year:
+    bool showSalvageVehMake = false;   //Salvage Vehicle Make:
+    bool showSalvageVehModel = false;  //Salvage Vehicle Model:
+    bool showTotalLossEst = false;     //Total Loss Vehicle Estimate Amount: $
+    bool showSalvageTypeLoss = false;  //Salvage Type Loss:
+    bool restrictExposureTypeToMedPay = false;
+
+    bool isReceivedYear = false;
+    bool isReceivedMake = false;
+    bool isReceivedModel = false;
+    bool isReceivedSalvageType = false;
+
+    string txtCashValue, txtOldDamageAmt, txtSalvageSubTotal, txtTaxAmount, txtSalvageValue, txtSalvagePDDed, txtSalvageOther, txtSalvageNetSet, txtSalvageVehYear, txtSalvageVehMake,
+      txtSalvageVehModel, txtTotalLossEst, txtSalvageTypeLoss;
+
+    string addNoCoverage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> claimantRoles = new List<string>();
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(claimantRoles.Contains))?.OrderBy(x => x.DisplayName)?.ToList();
+
+
+            showCashValue = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showCashValue), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showOldDamageAmt = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showOldDamageAmt), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageSubTotal = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageSubTotal), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showTaxAmount = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showTaxAmount), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageValue = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageValue), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvagePDDed = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvagePDDed), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageOther = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageOther), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageNetSet = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageNetSet), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageVehYear = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageVehYear), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageVehMake = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageVehMake), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageVehModel = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageVehModel), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showTotalLossEst = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showTotalLossEst), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            showSalvageTypeLoss = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showSalvageTypeLoss), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            restrictExposureTypeToMedPay = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(restrictExposureTypeToMedPay), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+
+            addNoCoverage = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(addNoCoverage), LookupData.documentData.documentEntity.DocumentId);
+            if (!string.IsNullOrEmpty(addNoCoverage))
+                partyList.Add(new PartyAddressUI
+                    {
+                        DisplayName = addNoCoverage,
+                        PartyID = addNoCoverage
+                    });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    Regex not_num_period = new Regex("[^0-9.]");
+    bool ChangeValue(string value,string lable)
+    {
+        PropertyInfo prop = this.GetType().GetProperty(lable);
+        if (null != prop && prop.CanWrite && !string.IsNullOrEmpty(value))
+        {
+            var val = not_num_period.Replace(value, "");
+            if (value != val)
+            {
+                prop.SetValue(this, val);
+                StateHasChanged();
+            }
+        }
+        return false;
+    }    
+
+    string partyID;
+    int? partyExposureID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                partyID = string.Empty;
+                partyExposure = new List<Exposure>();
+                partyExposureID = 0;
+            }
+            else
+            {
+                partyID = myArgs.ToString();
+                var exposure = ((GCSourceSystemEntity)LookupData.SourceSystemEntity)?.Claim?.InvolvedParties?.Where(x => x.id.ToString() == partyID)?.SelectMany(y => y.Exposures)?.OrderBy(y=>y.ExposureType)?.ToList();
+                if (restrictExposureTypeToMedPay)
+                    partyExposure = exposure?.Where(x => x.ExposureType?.ToLower() == ApplicationConstants.Med_Pay.ToLower())?.ToList();
+                else
+                    partyExposure = exposure;
+                partyExposureID = partyExposure?.Count()==1 ?partyExposure?.FirstOrDefault()?.id:null;
+                OnExposureChanged(partyExposureID);
+            }
+            if (!partyExposureID.HasValue)
+                foreach (var cntl in components)
+                    cntl.Reset();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnExposureChanged(object myArgs)
+    {
+        partyExposureID = myArgs == null?null:  (int)myArgs;
+
+        if (partyExposureID == null)
+            return;
+        var exposure = partyExposure.Where(x => x.id == partyExposureID).FirstOrDefault();
+        if (exposure == null)
+            return;
+        txtCashValue = exposure?.SalvageActualCashValue;
+        txtOldDamageAmt = exposure?.SalvageOldDamageAmount;
+        txtSalvageSubTotal = exposure?.SalvageSubTotal;
+        txtTaxAmount = exposure?.SalvageTaxAmount;
+        txtSalvageValue = exposure?.SalvageValue;
+        txtSalvagePDDed = exposure?.SalvageDeductible;
+        txtSalvageOther = exposure?.SalvageOtherAdjustments;
+        txtSalvageNetSet = exposure?.SalvageNetSettlement;
+        txtSalvageVehYear = exposure?.SalvageVehicleYear;
+        txtSalvageVehMake = exposure?.SalvageVehicleMake;
+        txtSalvageVehModel = exposure?.SalvageVehicleModel;
+        txtTotalLossEst = exposure?.SalvageTotalLossEstimate;
+        txtSalvageTypeLoss = exposure?.SalvageTypeOfLoss;
+
+        isReceivedYear = string.IsNullOrEmpty(txtSalvageVehYear);
+        isReceivedMake = string.IsNullOrEmpty(txtSalvageVehMake);
+        isReceivedModel = string.IsNullOrEmpty(txtSalvageVehModel);
+        isReceivedSalvageType = string.IsNullOrEmpty(txtSalvageTypeLoss);
+
+        StateHasChanged();
+
+
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID) || (!partyExposureID.HasValue) && (partyID != addNoCoverage))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+        var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+        var exposure = partyExposure.Where(x => x.id == partyExposureID).FirstOrDefault();
+        if (selectedParty != null)
+        {
+            userSelection.ExposureDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCExposure();
+            userSelection.ExposureDetails.Name = selectedParty?.DisplayName;
+            userSelection.ExposureDetails.ClaimentID = selectedParty?.PartyID;
+            userSelection.ExposureDetails.ExposureType = exposure?.ExposureType;
+            userSelection.ExposureDetails.ExposureNumber = exposure?.ExposureNumber;
+            userSelection.ExposureDetails.JurisdictionState = exposure?.ExposureJurisdictionState;
+            userSelection.ExposureDetails.Deductible = exposure?.Deductible;
+            userSelection.ExposureDetails.Represented = exposure?.Represented ?? false;
+            if (showCashValue) { userSelection.ExposureDetails.txtCashValue = string.IsNullOrEmpty(txtCashValue) ? "0" : txtCashValue; }
+            if (showOldDamageAmt) { userSelection.ExposureDetails.OldDamageAmt = string.IsNullOrEmpty(txtOldDamageAmt) ? "0": txtOldDamageAmt; }
+            if (showSalvageSubTotal) { userSelection.ExposureDetails.SalvageSubTotal = string.IsNullOrEmpty(txtSalvageSubTotal) ? "0":txtSalvageSubTotal; }
+            if (showTaxAmount) { userSelection.ExposureDetails.TaxAmount = string.IsNullOrEmpty(txtTaxAmount) ?"0": txtTaxAmount; }
+            if (showSalvageValue) { userSelection.ExposureDetails.SalvageValue = string.IsNullOrEmpty(txtSalvageValue) ? "0" : txtSalvageValue; }
+            if (showSalvagePDDed) { userSelection.ExposureDetails.SalvagePDDed = string.IsNullOrEmpty(txtSalvagePDDed) ? "0":txtSalvagePDDed; }
+            if (showSalvageOther) { userSelection.ExposureDetails.SalvageOther = string.IsNullOrEmpty(txtSalvageOther) ? "0":txtSalvageOther; }
+            if (showSalvageNetSet) { userSelection.ExposureDetails.SalvageNetSet = string.IsNullOrEmpty(txtSalvageNetSet) ? "0": txtSalvageNetSet; }
+            if (showSalvageVehYear) { userSelection.ExposureDetails.SalvageVehYear = string.IsNullOrEmpty(txtSalvageVehYear) ? "0" : txtSalvageVehYear; }
+            if (showSalvageVehMake) { userSelection.ExposureDetails.SalvageVehMake = string.IsNullOrEmpty(txtSalvageVehMake)  ? "0" : txtSalvageVehMake; }
+            if (showSalvageVehModel) { userSelection.ExposureDetails.SalvageVehModel = string.IsNullOrEmpty(txtSalvageVehModel) ? "0": txtSalvageVehModel; }
+            if (showTotalLossEst) { userSelection.ExposureDetails.TotalLossEst = string.IsNullOrEmpty(txtTotalLossEst) ?"0" : txtTotalLossEst; }
+            if (showSalvageTypeLoss) { userSelection.ExposureDetails.SalvageTypeLoss = string.IsNullOrEmpty(txtSalvageTypeLoss)? "0": txtSalvageTypeLoss; }
+
+        }
+    }
+}

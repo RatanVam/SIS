@@ -1,0 +1,16 @@
+Please execute the scripts in following order
+
+0) GetDropdownItemId.sql
+1) Table_change.sql
+2) GetPrinterLookupData.sql
+3) Rules\Rules.sql
+4) Rules\GetRule.sql
+5) Rules\GetRuleLookup.sql
+6) Rule_data_UMB
+6.5) UMB_Generic_Dropdown_Values.sql
+7) Data_Migration_common.sql
+8) Data_Migration_Prod.sql
+9) GetDocumentDropdownLookupData.sql
+10)GetConfigurationLookup.sql
+
+

@@ -1,0 +1,308 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+
+<div class="panel panel-primary">
+    <div class="panel-heading">Exam Information</div>
+    <div class="panel-body">
+        <div class="form-group">
+
+            <!--Addressee Role dropdown list-->
+            <div class="row">
+                <div class="col-md-3"><label>* Send Notification of Exam to: Role</label></div>
+                <div class="col-md-5">
+                    <RadzenDropDown TValue ="string" Name="selectedPrimaryRole" class="@LookupData.GetTextColorClass(selectedPrimaryRole, firstRendeValue )" Data=@PrimaryRoleList
+                                           Change=@(args => OnPrimaryRoleChanged(args)) AllowClear=true Value="@selectedPrimaryRole" Placeholder="--Select--"   Style="width: 100%; max-width: 400px;" />
+
+                </div>
+            </div>
+
+            <!--Primary addressee dropdown list-->
+            <div class="row">
+                <div class="col-md-3"><label>* Name (for Send Notification of Exam to:)</label></div>
+                <div class="col-md-5">
+                    <RadzenDropDown @ref="childComponent" class="@LookupData.GetTextColorClass(selectedPrimaryAddresseeName, firstRendeValue)"  TValue="ControlClass.PartyAddressUI"  Data=@PrimaryAddresseeList TextProperty="DisplayName" ValueProperty="PartyID"
+                                    Value=@selectedPrimaryAddresseeName Change=@((args) => OnPrimaryAddresseeChanged(args)) AllowClear=true Placeholder="--Select--"  Style="width: 100%; max-width: 400px;" />
+                </div>
+                <div class="col-md-4"></div>
+            </div>
+
+            <!--Primary addressee address dropdown list-->
+            <div class="row">
+                <div class="col-md-3"><label>* Address (for Send Notification of Exam to:)</label></div>
+                <div class="col-md-9">
+                    <RadzenDropDown @ref="addresseeChildComponent" class="@LookupData.GetTextColorClass(selectedPrimaryAddresseeAddress, firstRendeValue)"  TValue="ControlClass.Address"  Data=@PrimaryAddresseeAddressList TextProperty="Line1Tx" ValueProperty="ID"
+                                    Value=@selectedPrimaryAddresseeAddress Change=@((args) => OnPrimaryAddresseeAddressChanged(args)) AllowClear=true Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                            @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} {context.Municipality}, {context.CountrySubdivision} {context.PostalCd} ({context.AddressUseCd})")
+                        </Template>
+                    </RadzenDropDown>
+                        <span class="alert-dangerMsg" hidden="@(!(!string.IsNullOrEmpty(selectedPrimaryAddresseeName) && PrimaryAddresseeAddressList.Count ==0))">@ApplicationConstants.NoDataMsg</span>
+                </div
+            </div>
+
+            <!--Attention dropdown list 1-->
+            <div class="row">
+                <div class="col-md-3">
+                    <RadzenSwitch @bind-Value=@selectedAttention1 Disabled="@( String.IsNullOrEmpty(selectedPrimaryRole) || (selectedAttention2 || selectedAttentionLabel1 == ApplicationConstants.NoDataMsg))" Name=@("selectedAttention1")></RadzenSwitch>                    <label>
+                        Attention Line:
+                    </label>
+                </div>
+                <div class="col-md-6">
+                    <RadzenDropDown Disabled="@( String.IsNullOrEmpty(selectedPrimaryRole) || (!selectedAttention1 || selectedAttentionLabel1 == ApplicationConstants.NoDataMsg))"   TValue="string"  Data=@AttentionTypeData Change="@(args => OnAttentionType1Changed(args))"
+                                    Value=@selectedAttentionType1 Placeholder="--Select--"  Style="width: 100px;" />
+                    <span class=@(selectedAttentionLabel1 == ApplicationConstants.NoDataMsg?"alert-dangerMsg":"")>@selectedAttentionLabel1</span>
+            </div>
+            </div>
+
+            <!--Attention dropdown list 2-->
+            <div class="row">
+                <div class="col-md-3">
+                    <RadzenSwitch Disabled=@(selectedAttention1) @bind-Value=@selectedAttention2 />
+                    <label>Attention Line:</label>
+                </div>
+
+                <div class="col-md-6">
+                    <RadzenDropDown Disabled=@(!selectedAttention2)  TValue="string"  Data=@AttentionTypeData  Change=@(args => OnAttentionType2Changed(args))
+                                    Value=@selectedAttentionType2  Placeholder="--Select--"  Style="width: 100px;" />
+                    <RadzenTextBox Disabled=@(!selectedAttention2) @bind-Value=@selectedAttentionLabel2 Name="@("selectedAttentionLabel2")"
+                                   Style="width: 100%; max-width: 280px;" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<string> PrimaryRoleList = new();
+    List<string> AttentionTypeData = new();
+
+    List<PartyAddressUI> PrimaryAddresseeList = new List<PartyAddressUI>();
+    List<PartyAddressUI> PrimaryPartyListData = new List<PartyAddressUI>();
+    List<ControlClass.Address> PrimaryAddresseeAddressList = new List<ControlClass.Address>();
+
+    string selectedPrimaryAddresseeName;
+    string selectedPrimaryRole;
+    string selectedAttentionType1;
+    string selectedAttentionType2;
+
+    string selectedAttentionLabel1;
+    string selectedAttentionLabel2;
+    string selectedPrimaryAddresseeAddress;
+    bool selectedAttention1 = false;
+    bool selectedAttention2 = false;
+    public RadzenDropDown<ControlClass.PartyAddressUI> childComponent { set => components.Add(value); }
+    public List<RadzenDropDown<ControlClass.PartyAddressUI>> components = new List<RadzenDropDown<ControlClass.PartyAddressUI>>();
+
+    public RadzenDropDown<ControlClass.Address> addresseeChildComponent { set => addresseeChildComponents.Add(value); }
+    public List<RadzenDropDown<ControlClass.Address>> addresseeChildComponents = new List<RadzenDropDown<ControlClass.Address>>();
+
+    public RadzenDropDown<ControlClass.PartyAddressUI> secondaryChildComponent { set => secondaryComponents.Add(value); }
+    public List<RadzenDropDown<ControlClass.PartyAddressUI>> secondaryComponents = new List<RadzenDropDown<ControlClass.PartyAddressUI>>();
+
+    List<string> wccRecipientExcludeRoles = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            wccRecipientExcludeRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wccRecipientExcludeRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            PrimaryPartyListData = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            //if (wccRecipientExcludeRoles != null)
+            PrimaryPartyListData.ForEach(x => Array.ForEach(x.PartyRoles, y => { PrimaryRoleList.Add(y); }));
+            PrimaryRoleList = PrimaryRoleList.Distinct().OrderBy(x => x).ToList();
+
+            PrimaryRoleList = PrimaryRoleList.OrderBy(x => x).ToList();
+            GetAttentionTypes();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    //get Attention Type lookup values
+    void GetAttentionTypes()
+    {
+        AttentionTypeData = LookupData.genericLookupEntity.Where(x => x.LookupTypeValue == ApplicationConstants.Attention).Select(x => x.GenericLookupItemCode).ToList();
+        selectedAttentionType2 = AttentionTypeData.FirstOrDefault();
+        selectedAttentionType1 = selectedAttentionType2;
+    }
+        void OnAttentionType2Changed(object args)
+    {
+        selectedAttentionType2 = args?.ToString();
+    }
+
+    List<PartyAddressUI> getAddresseeData(string role)
+    {
+        return PrimaryPartyListData.Where(x => x.PartyRoles.Contains(role) && !(x.PartyRoles.Length == 1 && x.PartyRoles.Any(wccRecipientExcludeRoles.Contains))).OrderBy(x => x.DisplayName).ToList();
+    }
+    public async void OnPrimaryAddresseeAddressChanged(object myArgs)
+    {
+        try
+        {
+
+            if (!string.IsNullOrEmpty(myArgs?.ToString()))
+            {
+                selectedPrimaryAddresseeAddress = myArgs.ToString();
+                var selectedAddress = PrimaryAddresseeAddressList.Where(x => x.ID == selectedPrimaryAddresseeAddress )?.FirstOrDefault();
+                if (selectedAddress != null && !string.IsNullOrEmpty(selectedAddress.Attention))
+                {
+                    selectedAttentionLabel1 = selectedAddress.Attention;
+                }
+                else
+                {
+                    selectedAttentionType1 = AttentionTypeData?.FirstOrDefault();
+                    selectedAttentionLabel1 = ApplicationConstants.NoDataMsg;
+                    selectedAttention1 = false;
+                }
+            }
+            else
+            {
+                selectedAttentionType1 = AttentionTypeData?.FirstOrDefault();
+                selectedAttentionLabel1 = ApplicationConstants.NoDataMsg;
+                selectedAttention1 = false;
+                selectedPrimaryAddresseeAddress = null;
+            }
+            StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    //selected Primary Addressee changed; get Primary Addressee Addressses
+    public async void OnPrimaryAddresseeChanged(object args)
+    {
+        PrimaryAddresseeAddressList = new List<ControlClass.Address>();
+        selectedPrimaryAddresseeAddress = null;
+        if (string.IsNullOrEmpty(args?.ToString()))
+        {
+            selectedPrimaryAddresseeName = null;
+            OnPrimaryAddresseeAddressChanged(args);
+        }
+        else
+        {
+            var selectedAddresse = PrimaryAddresseeList.Where(x => x.PartyID == args.ToString())?.FirstOrDefault();
+            selectedPrimaryAddresseeName = selectedAddresse?.PartyID;
+
+            if (selectedAddresse != null && selectedAddresse.PartyAddresses?.Count > 0)
+            {
+                PrimaryAddresseeAddressList.AddRange(selectedAddresse.PartyAddresses);
+                if (PrimaryAddresseeAddressList.Count == 1)
+                {
+                    //default to first Address in list
+                    selectedPrimaryAddresseeAddress = PrimaryAddresseeAddressList?.FirstOrDefault()?.ID;
+                    //get the Attention name
+                    OnPrimaryAddresseeAddressChanged(selectedPrimaryAddresseeAddress);
+                }
+            }
+            else
+            {
+                selectedAttentionLabel1 = ApplicationConstants.NoDataMsg;
+                selectedAttention1 = false;
+            }
+
+        }
+        //foreach (var cntl in addresseeChildComponents)
+        //    cntl.Reset();
+        StateHasChanged();
+
+    }
+    void OnAttentionType1Changed(object args)
+    {
+        selectedAttentionType1 = args?.ToString();
+    }
+
+    public async void OnPrimaryRoleChanged(object myArgs)
+    {
+        try
+        {
+            selectedPrimaryAddresseeAddress = null;
+            selectedPrimaryAddresseeName = null;
+            if (string.IsNullOrEmpty(myArgs?.ToString()))
+            {
+                selectedPrimaryRole = null;
+                PrimaryAddresseeList = new List<PartyAddressUI>();
+                PrimaryAddresseeAddressList = new List<ControlClass.Address>();
+            }
+            else
+            {
+                selectedPrimaryRole = myArgs.ToString();
+                PrimaryAddresseeList = getAddresseeData(selectedPrimaryRole);
+                if (PrimaryAddresseeList != null && PrimaryAddresseeList.Count == 1)
+                    selectedPrimaryAddresseeName = PrimaryAddresseeList?.FirstOrDefault()?.PartyID;
+
+            }
+                OnPrimaryAddresseeChanged(selectedPrimaryAddresseeName);
+            //foreach (var cntl in components)
+            //    cntl.Reset();
+            StateHasChanged();
+
+        }
+        catch(Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedPrimaryRole) || string.IsNullOrEmpty(selectedPrimaryAddresseeName) || string.IsNullOrEmpty(selectedPrimaryAddresseeAddress))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        userSelection.ExamInfo = new Addressee();
+        PartyAddressUI selectedAddresse = PrimaryPartyListData?.Where(x => x.PartyID == selectedPrimaryAddresseeName)?.FirstOrDefault();
+        if (selectedAddresse != null)
+        {
+            userSelection.ExamInfo.Name = selectedAddresse.DisplayName;
+            if (!string.IsNullOrEmpty(selectedPrimaryAddresseeAddress))
+            {
+                var address = selectedAddresse.PartyAddresses?.Where(x => x.ID == selectedPrimaryAddresseeAddress)?.FirstOrDefault();
+                if (address != null)
+                    userSelection.ExamInfo.Address = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address()
+                        {
+                            Line1Tx = address.Line1Tx,
+                            Line2Tx = address.Line2Tx,
+                            Line3Tx = address.Line3Tx,
+                            MunicipalityNm = address.Municipality,
+                            CountrySubdivisionNm = address.CountrySubdivision,
+                            PostalCd = address.PostalCd,
+                            PostNet = address.Barcode,
+                            Country = address.Country
+                        };
+            }
+        }
+        userSelection.ExamInfo.Attention = new Attention()
+            {
+                Type = selectedAttention1 ? selectedAttentionType1 : selectedAttention2 ? selectedAttentionType2 : string.Empty,
+                Value = selectedAttention1 ? selectedAttentionLabel1 : selectedAttention2 ? selectedAttentionLabel2 : string.Empty
+            };
+
+
+    }
+}

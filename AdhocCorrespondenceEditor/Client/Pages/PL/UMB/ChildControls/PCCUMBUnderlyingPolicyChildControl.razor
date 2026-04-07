@@ -1,0 +1,75 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="row">
+             <div class="row"> 
+                    <div class="col-md-4">* Underlying Policy:</div>
+                   <div class="col-md-5"> <RadzenDropDown class="@LookupData.GetTextColorClass(underlyingPolicy, firstRendeValue)"   TValue="string" Data=@underlyingPolicyList Change=@(args => OnUnderlyingChanged(args))  AllowClear=true  
+                       Placeholder="--Select--" Style="width: 100%; max-width: 400px;">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                   </div>
+                </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    IEnumerable<DocumentDropdownLookupDataEntity> underlyingPolicyList;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+
+            var underlyingDropDownItem = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(underlyingPolicyList), LookupData.documentData.documentEntity.DocumentId);
+            underlyingPolicyList=(await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{underlyingDropDownItem}/")); 
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string underlyingPolicy=string.Empty;
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (isValidate && string.IsNullOrEmpty(underlyingPolicy))
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+        if (LookupData.documentData.documentEntity.DocumentFriendlyName == ApplicationConstants.DocNameNoticeofNonrenewalWithdrawal || 
+        LookupData.documentData.documentEntity.DocumentFriendlyName == ApplicationConstants.DocNameMidtermCancelWithdrawal)
+            ((PLHoUmbDwUserEntity)LookupData.UserSelection).UnderlyingPolicyType = underlyingPolicy;
+        else
+            ((PLHoUmbDwUserEntity)LookupData.UserSelection).UnderlyingPolicy = underlyingPolicy;
+    }
+
+    public async void OnUnderlyingChanged(object myArgs)
+    {
+        underlyingPolicy = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+    }
+
+}

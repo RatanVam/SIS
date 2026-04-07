@@ -1,0 +1,137 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using AdhocCorrespondenceEditor.Shared.PCMulti
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Policy Transactions
+    </div>
+    <div class="panel-body">
+        <div class="form-group">
+<RadzenDataGrid Data="@policyTransaction" PagerHorizontalAlign="HorizontalAlign.Center" TItem="PolicyTransactionDetailsDTO" ColumnWidth="200px">
+    <Columns>
+        <RadzenDataGridColumn TItem="PolicyTransactionDetailsDTO" Title="Select" Width="50px" TextAlign="TextAlign.Center" >
+            <Template Context="data">
+                <RadzenSwitch Change="@(args => TransactionClicked(args, data.QuoteID))"/> 
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PolicyTransactionDetailsDTO" Property="LineOfBusiness" Title="Line of Business" Width="190px" >
+            <Template Context="data">
+                @(data.LineOfBusiness)
+                    @foreach (var SubLineEntry in data.SubLineInfo)
+                    {
+                        <li>@GetPolicyLine(SubLineEntry.PolicyLine)</li>
+                    }
+                    <br />
+                        <label>
+                            @data.UnderwritingCompany
+                        </label>
+                        <span class="alert-dangerMsg" hidden="@data.LineOfBusiness.Length">@ApplicationConstants.NoDataMsg</span>
+            </Template>
+
+</RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PolicyTransactionDetailsDTO" Title="Effective Dates" Width="100px" TextAlign="TextAlign.Center" >
+                        <Template Context="data">
+                            @(Convert.ToDateTime(data.EffectiveDate).ToString("MM/dd/yyyy") +" - "+Convert.ToDateTime(data.ExpirationDate).ToString("MM/dd/yyyy"))
+                            <br /><br />
+                        </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PolicyTransactionDetailsDTO" Property="QuoteID" Title="Quote Number" Width="80px" TextAlign="TextAlign.Center">
+            <Template Context="data">
+                            @(data.QuoteID)
+                <br /><br />
+            </Template>
+            <FooterTemplate>
+                 <b style="float:right">Total :</b>
+            </FooterTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PolicyTransactionDetailsDTO" Property="TotalPremium" Title="Premium" Width="100px" TextAlign="TextAlign.Left">
+            <Template Context="data" >
+                @(data.TotalPremium) 
+                     @foreach (var SubLineEntry in data.SubLineInfo)
+                             {
+                                <li >@SubLineEntry.Premium</li>
+                             }
+                <br /> <br />
+            <span class="alert-dangerMsg" hidden="@data.TotalPremium.HasValue">@ApplicationConstants.NoDataMsg</span>
+            </Template>
+            <FooterTemplate>
+                 <b style="float:left">@totalPremium</b>
+            </FooterTemplate>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+        </div>  
+
+ </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<PolicyTransactionDetailsDTO> policyTransaction;
+    decimal? totalPremium = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            policyTransaction = ((PCMultiSourceSystemEntity)(LookupData.SourceSystemEntity)).RetrieveAccountInformationResponseMessage.AccountInformation.PolicyTransactions.ToList();
+            foreach (var trans in policyTransaction)
+            {
+                trans.LineOfBusiness = GetLineOfBusiness(trans.LineOfBusiness);
+            }
+        }
+        catch(Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    List<string> selectedTransactions = new List<string>();
+    void TransactionClicked(bool value, string qutationID)
+    {
+
+        if (value)
+            selectedTransactions.Add(qutationID);
+        else
+            selectedTransactions.Remove(qutationID);
+        totalPremium = policyTransaction.Where(t2 => selectedTransactions.Any(t1 => t2.QuoteID.Contains(t1))).Select(x => x.TotalPremium).Sum();
+        StateHasChanged();
+    }
+
+    string GetPolicyLine(string policyLine)
+    {
+        ILookup<string, string> lookup = ApplicationConstants.PolicyLine.
+                                            ToLookup(x => x.Key, x => x.Value);
+
+        return lookup[policyLine].SingleOrDefault();
+    }
+    string GetLineOfBusiness(string lineOfBusiness)
+    {
+        ILookup<string, string> lookup = ApplicationConstants.LineOfBusiness.
+                                            ToLookup(x => x.Key, x => x.Value);
+
+        return lookup[lineOfBusiness].SingleOrDefault();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((MultiUserEntity)LookupData.UserSelection);
+        userSelection.Quotations.AddRange(selectedTransactions);
+        userSelection.TotalPremium = totalPremium.HasValue ? (int)totalPremium.Value : 0;
+    }
+}

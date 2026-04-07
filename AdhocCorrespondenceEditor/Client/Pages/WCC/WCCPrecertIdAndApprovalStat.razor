@@ -1,0 +1,149 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Precert Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Precert ID:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown class="@LookupData.GetTextColorClass(precertID, firstRendeValue )" TValue="string" Data=@precertIDList 
+                    TextProperty="PreCertificationNumber" ValueProperty="PreCertificationNumber"  Change=@(args => OnPrecertIDChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                         <Template> @($"{context.PreCertificationNumber}") </Template></RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(precertIDList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+             <div class="row">
+                 <div class="col-md-3">
+                     Approval Status:
+                 </div>
+                  <div class="col-md-9">
+                <div class="row">
+                    <div class="col-md-4">
+                        CPT Code(s)
+                        </div>
+                    <div class="col-md-4">
+                        Assistant Surgeon Status
+                        </div>
+                    <div class="col-md-4">
+                        Co-Surgeon Status
+                        </div>
+                        </div>
+                @if(selectedPrecert?.Procedures != null)
+            foreach (var obj in selectedPrecert?.Procedures)
+            {
+                <div class="row">
+                    <div class="col-md-4">
+                        <RadzenSwitch Change="@(args => ProcedureSelected(args, obj.ProcedureCode))"/> @obj.ProcedureCode
+                    </div>
+                    <div class="col-md-4">
+                        @obj.AssistantStatus
+                    </div>
+                    <div class="col-md-4">
+                        @obj.CoSurgeonStatus
+                    </div>
+                </div>
+            }
+          </div>       
+          </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<Precertification> precertIDList = new();
+    Precertification selectedPrecert = new Precertification();
+    List<string> selectedProcidureID = new List<string>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            precertIDList = (((WCCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.Precertifications.Select(x => x))?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string precertID;
+    async void OnPrecertIDChanged(object myArgs)
+    {
+        try
+        {
+            selectedPrecert = null;
+            StateHasChanged();
+            precertID = myArgs == null ? string.Empty : myArgs.ToString();
+            if (!string.IsNullOrEmpty(precertID))
+            {
+                selectedPrecert = precertIDList.Where(x => x.PreCertificationNumber == precertID)?.FirstOrDefault();
+            }
+            else
+                selectedPrecert = null;
+            selectedProcidureID.Clear();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    void ProcedureSelected(bool args, string procidureCode)
+    {
+        if (args)
+            selectedProcidureID.Add(procidureCode);
+        else
+            selectedProcidureID.Remove(procidureCode);
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        userSelection.PrecertDetails = new();
+        if (string.IsNullOrEmpty(precertID))
+        { LookupData.errorDetails.IsInValid = true;
+            return;}
+            userSelection.PrecertID = precertID;
+        userSelection.PrecertDetails = new PrecertInformation
+            {
+                ProvidertaxNumber = selectedPrecert.ProvidertaxNumber,
+                AdmissionStatus = selectedPrecert.AdmissionStatus,
+                FacilityName = selectedPrecert.FacilityName,
+                PreAuthorizedStatus = selectedPrecert.PreAuthorizedStatus,
+                PreCertificationNumbe = selectedPrecert.PreCertificationNumber,
+                PreSurgeryDate = selectedPrecert.PreSurgeryDate,
+                ProviderName = selectedPrecert.ProviderName,
+                PrecertProcedureList = selectedPrecert.Procedures?.Where(y=>selectedProcidureID.Contains(y.ProcedureCode)).Select(x => new PrecertProcedures
+                {
+                    AssistantStatus = x.AssistantStatus,
+                    AssistantType = x.AssistantType,
+                    CoSurgeonStatus = x.CoSurgeonStatus,
+                    ProcedureCode = x.ProcedureCode
+                })?.ToList()};
+    }
+}

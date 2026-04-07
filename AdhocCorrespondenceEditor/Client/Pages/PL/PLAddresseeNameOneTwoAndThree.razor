@@ -1,0 +1,246 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Addressee Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Addressee 1 Name:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown TValue="PartyAddressUI" class="@LookupData.GetTextColorClass(displayName, firstRendeValue)" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+            <div class="row margin-top-controls">
+                <div class="col-md-3">
+                   * Addressee 1 Address:
+                </div>
+                <div class="col-md-6">
+                   <RadzenDropDown @ref="childComponent" class="@LookupData.GetTextColorClass(selectedAddressID, firstRendeValue)" TValue="ControlClass.Address" Data=@partyAddresses TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd} ({context.AddressUseCd})")        
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(partyAddresses.Count > 0 || string.IsNullOrEmpty(displayName))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+                         <div class="row  margin-top-controls" hidden="@(string.IsNullOrEmpty(addresseeName2))">
+                <div class="col-md-3">
+                    Addressee Name 2:
+                </div>
+                <div class="col-md-6">
+                     <RadzenSwitch @bind-Value=@AddresseeTwoNameSelected Disabled ="@(string.IsNullOrEmpty(addresseeName2))" />
+                    @addresseeName2
+                    <span class="alert-dangerMsg" hidden="@(!string.IsNullOrEmpty(addresseeName2))">@ApplicationConstants.NoDataMsg</span>
+
+                </div>
+            </div>
+
+                         <div class="row  margin-top-controls" hidden="@(string.IsNullOrEmpty(addresseeName3))">
+                <div class="col-md-3">
+                    Addressee Name 3:
+                </div>
+                <div class="col-md-6">
+                    <RadzenSwitch @bind-Value=@AddresseeThirdNameSelected />
+                    @addresseeName3
+                    <span class="alert-dangerMsg" hidden="@(!string.IsNullOrEmpty(addresseeName3))">@ApplicationConstants.NoDataMsg</span>
+
+                </div>
+            </div>
+                                   <div class="row  margin-top-controls" hidden="@(!showIDCardAddress)">
+                <div class="col-md-3">
+                    ID Card Address:
+                </div>
+                <div class="col-md-6">
+                   <RadzenDropDown Value=@selectedIDCardAddressID TValue="ControlClass.Address" Data=@idCardAddresses TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnIDCardAddressChanged(args)) AllowClear=false  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd} ({context.AddressUseCd})")        
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(idCardAddresses.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public bool AddresseeTwoNameSelected = false;
+    public bool AddresseeThirdNameSelected = false;
+
+    RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+    List<PartyAddressUI> partyList = new();
+    List<ControlClass.Address> partyAddresses  = new List<ControlClass.Address>();
+    List<ControlClass.Address> idCardAddresses  = new List<ControlClass.Address>();
+    string selectedAddressID,selectedIDCardAddressID = string.Empty;
+    string addresseeName2,addresseeName3 = string.Empty;
+    string displayName = string.Empty;
+    PartyAddressUI selectedParty;
+    bool showIDCardAddress = false;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string PLFirstAddresseeInformationRoles, SecondaryNamedInsured, OtherNamedInsured;
+            PLFirstAddresseeInformationRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(PLFirstAddresseeInformationRoles), LookupData.documentData.documentEntity.DocumentId);
+            SecondaryNamedInsured = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(SecondaryNamedInsured), LookupData.documentData.documentEntity.DocumentId);
+            OtherNamedInsured = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(OtherNamedInsured), LookupData.documentData.documentEntity.DocumentId);
+            showIDCardAddress = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showIDCardAddress), LookupData.documentData.documentEntity.DocumentId)?.ToString()?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(PLFirstAddresseeInformationRoles))
+            {
+                var partyRoles = PLFirstAddresseeInformationRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Any(partyRoles.Contains) || x.PartyType.ToUpper() == ApplicationConstants.Organization.ToUpper()).ToList();
+            }
+            if (!string.IsNullOrEmpty(SecondaryNamedInsured))
+            {
+                var paryinfo2 = partyFullList.Where(x => x.PartyRoles.Contains(SecondaryNamedInsured)).FirstOrDefault();
+                if (paryinfo2 != null)
+                    addresseeName2 = paryinfo2.DisplayName;
+            }
+            if (!string.IsNullOrEmpty(OtherNamedInsured))
+            {
+                var paryinfo3 = partyFullList.Where(x => x.PartyRoles.Contains(OtherNamedInsured));
+                if (paryinfo3 != null)
+                    addresseeName3 = string.Join(",", paryinfo3.Select(x => x.DisplayName));
+            }
+            if (showIDCardAddress)
+            {
+                var primaryAddress = GetPolicyAddress(((PLAutoSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.PolicyLocation);
+                idCardAddresses.AddRange(primaryAddress);
+                foreach (var party in partyList)
+                    idCardAddresses.AddRange(party.PartyAddresses);
+
+                selectedIDCardAddressID = primaryAddress?.FirstOrDefault()?.ID;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedAddressID) || string.IsNullOrEmpty(displayName))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((PLOutputBase)LookupData.UserSelection);
+        if (!string.IsNullOrEmpty(addresseeName2))
+            userSelection.AddresseeAddress2 = AddresseeTwoNameSelected ? addresseeName2?.Trim() : string.Empty;
+        if (!string.IsNullOrEmpty(addresseeName3))
+            userSelection.AddresseeAddress3 = AddresseeThirdNameSelected ? addresseeName3?.Trim() : string.Empty;
+
+        if (selectedParty != null)
+            userSelection.AddresseeAddress.DisplayName = displayName;
+        if (partyAddresses != null)
+        {
+            var selectedAddress = partyAddresses.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+            userSelection.AddresseeAddress.Line1Tx = selectedAddress?.Line1Tx;
+            userSelection.AddresseeAddress.Line2Tx = selectedAddress?.Line2Tx;
+            userSelection.AddresseeAddress.Line3Tx = selectedAddress?.Line3Tx;
+            userSelection.AddresseeAddress.MunicipalityNm = selectedAddress?.Municipality;
+            userSelection.AddresseeAddress.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            userSelection.AddresseeAddress.PostalCd = selectedAddress?.PostalCd;
+        }
+        else
+            userSelection.AddresseeAddress = new();
+
+        if (idCardAddresses != null)
+        {
+            var selectedAddress = idCardAddresses.Where(x => x.ID == selectedIDCardAddressID).FirstOrDefault();
+            userSelection.IDCardAddress.Line1Tx = selectedAddress?.Line1Tx;
+            userSelection.IDCardAddress.Line2Tx = selectedAddress?.Line2Tx;
+            userSelection.IDCardAddress.Line3Tx = selectedAddress?.Line3Tx;
+            userSelection.IDCardAddress.MunicipalityNm = selectedAddress?.Municipality;
+            userSelection.IDCardAddress.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            userSelection.IDCardAddress.PostalCd = selectedAddress?.PostalCd;
+        }
+    }
+
+
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                displayName = string.Empty;
+                selectedParty = null;
+                partyAddresses = new List<ControlClass.Address>();
+            }
+            else
+            {
+                selectedParty = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault();
+                displayName = selectedParty.DisplayName;
+                partyAddresses = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault().PartyAddresses;
+            }
+            foreach (var cntl in components)
+                cntl.Reset();
+            selectedAddressID = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+    public async void OnIDCardAddressChanged(object myArgs)
+    {
+        selectedIDCardAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+
+    public static List<ControlClass.Address> GetPolicyAddress(PolicyLocation locations)
+    {
+        List<ControlClass.Address> partyLst = new();
+            partyLst.Add(new ControlClass.Address
+                {
+                    AddresseeNameLine1Tx = locations.Address?.AddresseeNameLine1Tx,
+                    AddresseeNameLine2Tx = locations.Address?.AddresseeNameLine2Tx,
+                    Line1Tx = locations.Address?.Line1Tx,
+                    Line2Tx = locations.Address?.Line2Tx,
+                    Line3Tx = locations.Address?.Line3Tx,
+                    PostalCd = locations.Address?.PostalCd,
+                    CountrySubdivision = locations.Address?.CountrySubdivision?.CountrySubdivisionNm,
+                    Municipality = ApplicationClassUtility.GetMunicipalityByType(ApplicationConstants.CITY, locations.Address),
+                    AddressUseCd = "Home",
+                    ID = locations.id.ToString()
+                });
+        return partyLst;
+    }
+
+}

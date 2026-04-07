@@ -1,0 +1,74 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Added PIP Listed on Policy
+    </div>
+    <div class="panel-body">
+        @foreach(var obj in reasonList)
+        {
+            <div class="row col-md-12" style="margin-top: 2px;margin-right:1px">
+                <RadzenSwitch Change="@(args => OnPIPCSelectionCanged(args, @obj.DocumentDropdownLookupItemCode))"/> @obj.DocumentDropdownLookupItemCode  
+                    </div>
+        }
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    List<DocumentDropdownLookupDataEntity>  reasonList = new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            reasonList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonList), LookupData.documentData.documentEntity.DocumentId)}/"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        userSelection.AddedPip =new ();
+        foreach (var item in selectedList)
+        {
+
+            var itemObj = reasonList.Where(x => x.DocumentDropdownLookupItemCode == item).FirstOrDefault();
+            if (itemObj != null)
+            {
+                Utility.UpdateValue(userSelection.AddedPip, itemObj.InspireTag, true);
+            }
+        }
+    }
+
+    List<string> selectedList= new ();
+    public async void OnPIPCSelectionCanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            selectedList.Add(myArgs);
+        else
+            selectedList.Remove(myArgs);
+    }
+
+}

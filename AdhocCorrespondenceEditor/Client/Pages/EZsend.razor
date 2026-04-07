@@ -1,0 +1,872 @@
+﻿@page "/Ezsend"
+
+@using AdhocCorrespondenceEditor.Client
+@using System.Text
+@using System.Text.Json
+@using System.ComponentModel.DataAnnotations
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.Shared
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.Common
+@using AdhocCorrespondenceEditor.Shared.BC
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.ACEEntity
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using System.Xml.Serialization
+@using System.Xml
+@using AdhocCorrespondenceEditor.Shared.PCMulti
+@using AdhocCorrespondenceEditor.Shared.PL
+@using AdhocCorrespondenceEditor.Shared.WCU
+@using System.Reflection
+@using Radzen
+@using Radzen.Blazor
+@using Microsoft.AspNetCore.WebUtilities
+@using System.Net.Http.Headers
+
+@inject IJSRuntime JSRuntime;
+@inject HttpClient Http
+@inject BlazorDisplaySpinnerHandler spinner
+@inject NavigationManager NavigationManager
+
+<br>
+<br>
+
+
+
+
+<EditForm Model="@model" OnSubmit="@OnSubmit">
+    <RadzenCard class="my-5 mx-auto" Style="max-width: 650px;">        
+        @if (model.IsPaperless) //conditional UI for Paperless
+        {
+            <DataAnnotationsValidator />
+
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem"Style="width:600px; margin:auto;">
+                <RadzenColumn class="rz-background-color-base-200 rz-p-3 rz-color-base-800">
+                    <h2 id="paperless_header">Send Paperless Link</h2>
+                </RadzenColumn>
+            </RadzenRow>
+
+            <RadzenRow class="rz-text-align-left rz-border-color-base-100"
+                       Style="width:600px; margin:10px auto 0 auto;">
+                <RadzenColumn class="rz-p-3 rz-m-0" Style="width:100%;">
+
+                    <label style="font-weight:bold;">Send to Email Address:</label>
+
+                    <RadzenRow>
+                        <RadzenColumn>
+                            <RadzenTextBox id="PaperlessEmailAddress"@bind-Value="model.emailAddress" Style="width:100%; margin-top:5px;" MaxLength="60" />
+                            <div class="ml-4 rz-color-danger">
+                                <ValidationMessage For="() => model.emailAddress" />
+                            </div>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenRow Style="margin-top:10px;">
+                        <RadzenColumn>
+                            <p style="color:#555;">
+                                We will email this address when a new document is available. This email will
+                                sync to the Preferred Email on the account and will be used for all policies enrolled in paperless.
+                            </p>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenRow Style="margin-top:20px;">
+                        <RadzenColumn>
+                            <p style="font-weight:bold;">Send the following required documents:</p>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenRow>
+                        <RadzenColumn>
+                            <ul>
+                                @foreach (var doc in (model.documentFlowData.PaperlessDocList?.Split(",") ?? Array.Empty<string>())
+                                            .Select(d => d.Trim()).Select(d => model.documentFlowData.jobState == "CT" && d.Equals("CT Consent Package", StringComparison.OrdinalIgnoreCase)
+                                            ? "CT Informed Consent Package": d).OrderByDescending(d => d.Equals("Paperless Consent", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    <li>@doc</li>
+                                }
+                            </ul>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                </RadzenColumn>
+            </RadzenRow>
+        }
+        else
+        {           
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem" Style="width:600px; margin:auto;">
+                <RadzenColumn class="rz-background-color-base-200 rz-p-3 rz-color-base-800">
+                    <h2 id="coverage_forms_header"> Send Coverage Forms Link</h2>
+                    <p>Please review the information below and make any changes as needed. Click 'Send Link' to continue or 'Cancel' to go back.</p>
+
+                    <DataAnnotationsValidator />
+                    <p>
+                        @* <ValidationSummary /> *@
+                    </p>
+                </RadzenColumn>
+            </RadzenRow>
+            @if (model.policyNumber == null)
+            {
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+
+                        <span style="display:inline-block"><span id="quote_number_label" style=" font-weight:bold; margin-right:5px;">Quote number </span></span>
+
+                    </RadzenColumn>
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+                        <span id="quote_number"> @model.jobNumber </span>
+                        <RadzenText id="JobNumber" @bind-Value="model.jobNumber"></RadzenText>
+                    </RadzenColumn>
+
+
+                </RadzenRow>
+            }
+            @if (model.policyNumber != null)
+            {
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap
+                ="1rem" Style
+                ="width:600px; margin:auto;">
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+
+                        <span style="display:inline-block"><span id="policy_number_label" style=" font-weight:bold; margin-right:5px;">Policy number </span></span>
+
+                    </RadzenColumn>
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+                        <span id="policy_number"> @model.policyNumber </span>
+                        <RadzenText id="PolicyNumber" @bind-Value="model.policyNumber"></RadzenText>
+                    </RadzenColumn>
+
+                </RadzenRow>
+            }
+            @if (model.csfEffective != null && model.policyNumber != null)
+            {
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap
+                ="1rem" Style
+                ="width:600px; margin:auto;">
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+
+                        <span style="display:inline-block"><span id="csf_Effective_label" style=" font-weight:bold; margin-right:5px;">CSF Effective </span></span>
+
+                    </RadzenColumn>
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+                        <span id="csf_Effective"> @model.csfEffective </span>
+                        <RadzenText id="PolicyNumber" @bind-Value="model.csfEffective"></RadzenText>
+                    </RadzenColumn>
+
+                </RadzenRow>
+            }
+            <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                <RadzenColumn class="rz-p-3 rz-color-base-800">
+                    <label for="PackageName"><span id="package_name_label" style="font-weight:bold; margin-right:5px;">Package Name </span></label>
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-3 rz-color-base-800">
+
+                    <select id="PackageName" class="form-control select-with-caret">
+                        <option value="O" selected>@model.PackageName</option>
+                    </select>
+
+                </RadzenColumn>
+            </RadzenRow>
+
+            <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                <RadzenColumn class="rz-p-3 rz-color-base-800 d-flex align-items-center">
+                    <RadzenText><span id="send_link_to_label" style="font-weight:bold">Send link to </span></RadzenText>
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-3 rz-color-base-800">
+                    <select id="select_option" @onchange="OnChangeContactMethod" class="form-control select-with-caret">
+                        <option value="" selected>--Select Option--</option>
+                        <option id = "select_text "value="Text">Text</option>
+                        <option id = "select_email "value="Email">Email</option>
+                    </select>
+                </RadzenColumn>
+            </RadzenRow>
+
+            <br />
+            <!-- Conditional Input Fields -->
+            @if (model.ContactMethod == "Text")
+            {               
+
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                    <RadzenColumn class="  rz-p-3 rz-color-base-800 d-flex align-items-center">
+                        <label for="PhoneNumber"><span id="text_mobile_number_label" style="font-weight:bold;">Mobile Number* </span></label>
+                    </RadzenColumn>
+                    <RadzenColumn class="rz-p-3 rz-color-base-800">
+                        @* <InputText id="PhoneNumber" @bind-Value="model.PhoneNumber"></InputText> *@
+                        <RadzenMask id="text_mobile_number" Mask="(***) ***-****" CharacterPattern="[0-9]" Placeholder="" @bind-Value="@model.phoneNumber" Name="PhoneNumber"
+                                    Style="width: 100%;" aria-label="Phone" />
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                    <RadzenColumn class="  rz-p-3 rz-color-base-800 d-flex align-items-center">
+                        <label for="text_email_address"><span id="text_email_label" style="font-weight:bold">Email </span></label>
+                    </RadzenColumn>
+                    <RadzenColumn class="  rz-p-3 rz-color-base-800">
+                        <RadzenTextBox id="text_email_address" @bind-Value="model.emailAddressText" Style="width: 100%;"></RadzenTextBox>
+                    </RadzenColumn>
+                </RadzenRow>
+                <div class="ml-4 rz-color-danger"><ValidationMessage For="()=>model.emailAddressText" /> </div>
+
+                <div class="ml-4 rz-color-danger">
+                    <ValidationMessage For="()=>model.phoneNumber" />
+                    @if (showPhoneErrorMessage)//API validation message
+                    {
+                        <p>Please enter a valid mobile number.</p>
+                    }
+                </div>
+
+            }
+            else if (model.ContactMethod == "Email")
+            {
+                <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+                    <RadzenColumn class="  rz-p-3 rz-color-base-800 d-flex align-items-center">
+                        <label><span id="email_email_label" style="font-weight:bold">Email* </span></label>
+                    </RadzenColumn>
+                    <RadzenColumn class="  rz-p-3 rz-color-base-800">
+                        <RadzenTextBox id="EmailAddress" @bind-Value="model.emailAddress" Style="width: 100%;"></RadzenTextBox>
+                    </RadzenColumn>
+                </RadzenRow>
+                <div class="ml-4 rz-color-danger"><ValidationMessage For="()=>model.emailAddress" /> </div>
+            }
+                             
+        }        
+        <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+            <RadzenColumn class="rz-background-color-base-100 rz-p-3 rz-color-base-800">
+
+                <div class="col-md-12 d-flex align-items-end justify-content-left mt-4">
+                    <RadzenButton id="button_send" ButtonType="ButtonType.Submit" Icon="save" Text="Send Link" ButtonStyle="ButtonStyle.Secondary" Disabled="@(model.IsPaperless ? false : string.IsNullOrEmpty(model.ContactMethod))" />
+                    <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="cancel" style="margin-left: 10px;" Text="Cancel" Click="@Cancel" />
+                </div>
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow class="rz-text-align-left rz-border-color-base-100" Gap="1rem" Style="width:600px; margin:auto;">
+            <RadzenColumn class="rz-background-color-base-100 rz-p-3 rz-color-base-800">
+                @if (showSuccessMessage)
+                {
+                    <div class="alert alert-success" role="alert">
+                        The link was sent successfully!
+                    </div>
+                }
+                else if (showErrorMessage)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @errorResponseMessage
+                    </div>
+                }
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+</EditForm>
+<div style="height:20px; background-color:#eeeeee; text-align:left;color:grey;font-size:14px;position:fixed;bottom:0px;z-index:100;width:100%"> &copy; 2023 New Jersey Manufacturers Insurance Group</div>
+
+
+
+
+@code {
+
+    EZSendRequest model = new();
+
+    [CascadingParameter]
+    public EventCallback<string> notifyUser { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    AceDataCollector aceDataCollector;
+    List<EZSendRequestData> ezsendList = new();
+
+    List<Type> selectedList = new();
+    public DisplayOptionStatus displayOptionStatus;
+    public InputQueryParameters inputQueryParameters;
+    private string idValue = string.Empty;
+    LoggerUtility loggerUtility;
+    string urlInteractive = string.Empty;
+    bool loadingError = true;
+    bool showPhoneErrorMessage = false;
+    bool showSuccessMessage = false;
+    bool showErrorMessage = false;
+    string errorResponseMessage = "";
+    bool phoneValid = false;
+    EditContext editContext;
+    string headingDisplay = string.Empty;
+    DateTime startDate, endDate;
+    bool hideGetTransaction = true;
+    bool savedSourceSystemData = false;
+    SourceSystemBaseEntity tempSourceSystemEntity;
+    bool saveDocDetailsInDB = false;
+    private int? CategoryId { get; set; } = null;
+    private int? DocumentId { get; set; } = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        startDate = endDate = DateTime.Now.Date;
+        inputQueryParameters = new InputQueryParameters(NavigationManager.Uri);
+        displayOptionStatus = new DisplayOptionStatus(inputQueryParameters);
+        loggerUtility = new LoggerUtility(NavigationManager.BaseUri, displayOptionStatus.DisplayText);
+        headingDisplay = displayOptionStatus.DisplayText;
+        editContext = new EditContext(model);
+        model.PhoneNumberMessageShown = true ? model.phoneNumber != "" : false;
+
+        ShowSpinner();
+        await GetUserData();  // siteminder
+        GetIdFromURI();
+        await GetEzSend();
+        await UpdateEZSendRequest();
+        HideSpinner();
+
+        Parameters.Add(ApplicationConstants.LookupData, aceDataCollector);
+        Parameters.Add("Logger", loggerUtility);
+    }
+
+    //Get ID from URI
+    private void GetIdFromURI()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("id", out var id))
+        {
+            idValue = id;
+        }
+    }
+
+    async Task GetEzSend()
+    {
+        try
+        {
+            var ezsendList = await Http.GetFromJsonAsync<List<EZSendRequestData>>($"{ApplicationConstants.UrlEzsendRequest}?Id={idValue}");
+
+            // Handle the case where the response is null or empty
+            if (ezsendList == null || ezsendList.Count == 0)
+            {
+                loggerUtility.LogInfoAsync(LogType.Error, $"EzSend List Empty");
+            }
+            else
+            {
+                var ezsendRequest = ezsendList.OrderByDescending(x => x.CreatedDateTime).FirstOrDefault();
+
+                if (ezsendRequest != null)
+                {
+                    // Deserialize the payload string into a PayloadData object
+                    var payloadData = JsonSerializer.Deserialize<EZSendRequest>(ezsendRequest.Payload);
+                    model.Id = ezsendRequest.Id;
+                    model.userId = ezsendRequest.UserId;
+                    model.csfEffective = payloadData.documentFlowData.csfEffective;
+                    model.policyEffectiveDate = payloadData.documentFlowData.policyEffectiveDate; //DG-19809
+                    model.PANJMBuyersGuideFlag = payloadData.documentFlowData.PANJMBuyersGuideFlag;
+                    model.policyNumber = payloadData.documentFlowData.policyNumber;
+                    model.transactionType = payloadData.documentFlowData.transactionType;
+                    model.jobLob = payloadData.documentFlowData.jobLob;
+                    model.jobNumber = payloadData.documentFlowData.jobNumber;
+                    model.jobState = payloadData.documentFlowData.jobState;
+                    model.documentFlow = payloadData.documentFlow;
+                    model.documentSessionID = payloadData.documentSessionID;
+                    model.emailAddress = payloadData.emailAddress;
+                    model.emailAddressText = payloadData.emailAddress;
+                    model.sourceSystem = payloadData.sourceSystem;
+                    model.returnURL = payloadData.returnURL;
+                    model.Status = payloadData.Status;
+                    model.documentFlowData = payloadData.documentFlowData; 
+                    model.PaperlessDocList = payloadData.documentFlowData.PaperlessDocList;
+                    // Format the phone number string to match the expected format
+                    string formattedPhoneNumber = String.IsNullOrEmpty(payloadData.phoneNumber) ? String.Empty : string.Format("({0}) {1}-{2}", payloadData.phoneNumber.Substring(0, 3), payloadData.phoneNumber.Substring(3, 3), payloadData.phoneNumber.Substring(6, 4));
+                    model.phoneNumber = formattedPhoneNumber;
+                    model.UserName = payloadData.documentFlowData.userName;
+
+                    PackageName();
+                } else {
+                    loggerUtility.LogInfoAsync(LogType.Error, $"EzSend List Empty");
+                }                
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex.Message);
+            loadingError = true;
+        }
+    }
+
+    private string PackageName()
+    {
+        if (model.jobState == "CT")
+        {
+            return model.PackageName = model.jobState + " " + "Informed Consent Package";
+        }
+
+        //12523 PL MD state - Technical story (EZ Send API) - New Business and Policy change
+        if (model.transactionType == "Reinstatement")
+        {
+            return model.PackageName = model.jobState + " " + "Reinstatement CSF Package";
+        }
+
+        return model.PackageName = model.jobState + " " + model.documentFlow + " " + "Package";
+
+
+    }
+
+    // async Task UpdateEZSendRequest()
+    // {
+    //     try
+    //     {
+    //         var result = await Http.GetFromJsonAsync<String>($"{ApplicationConstants.UrlUpdateEZSendUser}?Id={model.Id}&UserId={inputQueryParameters.UserDetails.UserID}");
+    //         Console.WriteLine($"Update User ID: {result}");    
+
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         loggerUtility.LogInfoAsync(LogType.Error, ex);
+    //     }
+    // }
+    async Task UpdateEZSendRequest()
+    {
+        try
+        {
+            ShowSpinner();
+
+            // Changed to GetAsync to manually process the response.
+            var response = await Http.GetAsync($"{ApplicationConstants.UrlUpdateEZSendUser}?Id={model.Id}&UserId={inputQueryParameters.UserDetails.UserID}");
+            // Response from the repository
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Check for empty or whitespace content
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+
+                    loggerUtility.LogInfoAsync(LogType.Information, content);
+                }
+                else
+                {
+                    loggerUtility.LogInfoAsync(LogType.Information, "Empty content");
+                }
+            }
+            else
+            {
+                loggerUtility.LogInfoAsync(LogType.Error, $"Error: {response.StatusCode} - {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+        }
+    }
+
+
+
+    async Task UpdateEzSendStatus()
+    {
+        try
+        {
+            ShowSpinner();
+            // Changed to GetAsync to manually process the response.
+            var response = await Http.GetAsync($"{ApplicationConstants.UrlUpdateEZSendStatus}?Status={(int)model.Status}&Id={model.Id}");
+            // Response from the repository
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Check for empty or whitespace content
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    loggerUtility.LogInfoAsync(LogType.Information, content);
+                }
+                else
+                {
+                    loggerUtility.LogInfoAsync(LogType.Information, "Empty content");
+                }
+            }
+            else
+            {
+                loggerUtility.LogInfoAsync(LogType.Error, $"Error: {response.StatusCode} - {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+        }
+    }
+
+
+
+
+
+    async Task GetUserData()
+    {
+        try
+        {
+            var user = await Http.GetFromJsonAsync<AdhocCorrespondenceEditor.Shared.UserData>(ApplicationConstants.UrlUser);
+            if (!user.IsAuthericated)
+            {
+                loggerUtility.LogInfoAsync(LogType.Warning, "Invalid User");
+                NavigationManager.NavigateTo("./Public/AccessDenied.html", true);
+                return;
+            }
+            urlInteractive = await Http.GetStringAsync(ApplicationConstants.UrlLookupGetWebServiceSearch);
+            inputQueryParameters.UserDetails = new Client.UserData
+            {
+                UserName = user.UserName,
+                UserRoles = user.UserRoles ?? string.Empty,
+                UserInitials = user.UserInital,
+                UserID = user.UserID
+            };
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool rendered = false;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(inputQueryParameters.UserDetails?.UserName) && !rendered)
+        {
+            rendered = true;
+            notifyUser.InvokeAsync(inputQueryParameters.UserDetails.UserName);
+        }
+    }
+
+
+    private async Task SubmitForm()
+    {
+        try
+        {
+            ResetMessages();
+            ShowSpinner();
+
+            // Map to API model
+            EzsendApiSubmit apiSubmit = MapToEzSendSubmit(model);
+            
+            HttpResponseMessage response = await Http.PostAsJsonAsync($"{ApplicationConstants.UrlSubmitEzSend}", apiSubmit);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Process success response
+                var message = await response.Content.ReadAsStringAsync();
+
+                showSuccessMessage = true;
+                showErrorMessage = false;
+                model.Status = RequestStatus.SUCCESS;
+                await UpdateEzSendStatus();
+                RedirectToPC();
+            }
+            else
+            {
+                // Process error response
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                errorResponseMessage = errorMessage;
+                model.Status = RequestStatus.START;
+                showErrorMessage = true;
+                showSuccessMessage = false;
+            }            
+        }
+        catch (Exception ex)
+        {
+            showErrorMessage = true;
+            errorResponseMessage = $"An error occurred: {ex.Message}";
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+            StateHasChanged();
+        }
+    }
+
+
+    EzsendApiSubmit MapToEzSendSubmit(EZSendRequest ezSendRequest)
+    {
+
+        try
+        {
+            //handles the situation when phoneNumber is empty in DB otherwise it coverts it to the format +1\d{10}
+            string phoneNumber = ezSendRequest.phoneNumber != "" ? "+1" + new string(ezSendRequest.phoneNumber.Where(char.IsDigit).ToArray()) : String.Empty;
+            // string pname = !string.IsNullOrEmpty(ezSendRequest.policyNumber) ? 
+            //                       ("SIGN_POLCHANGE" + ezSendRequest.documentFlow + "_" + ezSendRequest.jobState)
+            //                       : ("SIGN_" + ezSendRequest.documentFlow + "_" + ezSendRequest.jobState);
+
+            string pname;
+            if (ezSendRequest.transactionType == "Reinstatement")
+            {
+                pname = "SIGN_POLREINSTATE_MD";
+            }
+            else
+            {
+                pname = !string.IsNullOrEmpty(ezSendRequest.policyNumber)
+                ? ("SIGN_POLCHANGE" + ezSendRequest.documentFlow + "_" + ezSendRequest.jobState)
+                : ("SIGN_" + ezSendRequest.documentFlow + "_" + ezSendRequest.jobState);
+            }
+
+            var email = "";
+
+            if (model.ContactMethod == "Text")
+            { email = model.emailAddressText; }
+            else { email = model.emailAddress; }
+
+            return new EzsendApiSubmit
+            {
+                processName = pname,
+                linkType = ezSendRequest.ContactMethod,
+                emailAddress = email,
+                phoneNumber = phoneNumber,
+                sourceSystem = ezSendRequest.sourceSystem.ToUpper(),
+                userId = inputQueryParameters.UserDetails.UserID,
+                jobNumber = ezSendRequest.jobNumber,
+                policyNumber = ezSendRequest.policyNumber,
+                documentSessionId = ezSendRequest.documentSessionID,
+                stateCode = ezSendRequest.jobState,
+                transactionType = ezSendRequest.transactionType,
+                policyEffectiveDate = ezSendRequest.policyEffectiveDate,
+                PANJMBuyersGuideFlag = ezSendRequest.PANJMBuyersGuideFlag,
+                IsPaperless = ezSendRequest.IsPaperless,//DG-20780 Map IsPaperless,IsCSF and jobLob to send to EzSendAPI
+                jobLob = ezSendRequest.jobLob,
+                IsCSF = ezSendRequest.IsCSF,
+                userName = ezSendRequest.UserName
+                };
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+            throw;
+        }
+    }
+
+
+
+    private async Task ValidatePhone()
+    {
+        string phone = model.phoneNumber != "" ? "+1" + new string(model.phoneNumber.Where(char.IsDigit).ToArray()) : null;
+        string payload = $@"{{""phoneNumber"":""{phone}""}}";
+
+        try
+        {
+            ShowSpinner();
+            Http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            StringContent content = new StringContent(payload, Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await Http.PostAsync($"{ApplicationConstants.UrlValidatePhone}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+
+                string responseContent = await response.Content.ReadAsStringAsync();
+
+                // First decode the JSON string
+                string decodedJson = JsonSerializer.Deserialize<string>(responseContent);
+
+
+                // Then deserialize the decoded JSON to the object
+                try
+                {
+                    var phoneValidationResponse = JsonSerializer.Deserialize<EZSendRequest>(decodedJson);
+                    if (phoneValidationResponse != null)
+                    {
+                        model.isMobilePhone = phoneValidationResponse.isMobilePhone;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Deserialization returned null, check the JSON format.");
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"JSON deserialization error: {ex.Message}");
+                    Console.WriteLine($"Problematic JSON: {decodedJson}");
+                }
+            }
+            else
+            {
+                string errorResponse = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed to validate phone. Server responded with error: {errorResponse}");
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+        }
+    }
+
+    private bool EmailValidate(EditContext editContext)
+    {
+
+        var model = editContext.Model as EZSendRequest;
+        if (model.ContactMethod != "Email")
+        {
+            model.isEmailValid = true; // No validation required if not Email method
+            return true;
+        }
+
+        var isValid = editContext.Validate();
+        // Perform validation only if ContactMethod is "Email"
+        // Check specific field validity
+
+        model.isEmailValid = !editContext.GetValidationMessages(
+        new FieldIdentifier(model, nameof(model.emailAddress))
+        ).Any();
+
+        return model.isEmailValid;
+    }
+
+    private bool EmailValidateText(EditContext editContext)
+    {
+
+        var model = editContext.Model as EZSendRequest;
+        var isValid = editContext.Validate();
+        // Perform validation only if ContactMethod is "Email"
+        // Check specific field validity
+
+        model.isEmailValid = !editContext.GetValidationMessages(
+        new FieldIdentifier(model, nameof(model.emailAddressText))
+        ).Any();
+
+        return model.isEmailValid;
+    }
+
+
+    private bool UiPhoneValidate(EditContext editContext)
+    {
+
+        var isValid = editContext.Validate();
+        var model = editContext.Model as EZSendRequest;
+        // Check specific field validity for the phone number
+        model.isUiPhoneValid = !editContext.GetValidationMessages(
+        new FieldIdentifier(model, nameof(model.phoneNumber))
+        ).Any();
+        return model.isUiPhoneValid;
+    }
+
+    private bool ValidatePaperlessEmail(EditContext context)
+    {
+        var emailField = new FieldIdentifier(model, nameof(model.emailAddress));
+        context.NotifyFieldChanged(emailField);
+        //Check field validation for Paperless Email field
+        var emailErrors = context.GetValidationMessages(emailField);
+        return !emailErrors.Any();
+    }
+
+
+    private async void OnSubmit(EditContext context)
+    {        
+        var eZSendRequest = context.Model as EZSendRequest;
+        //Reset UI state messages at the start.
+        showSuccessMessage = false;
+        showPhoneErrorMessage = false;
+        StateHasChanged();
+        if (model.IsPaperless)
+        {
+            bool isValid = ValidatePaperlessEmail(context);
+
+            if (!isValid)
+            {
+                return;
+            }
+            // DG-20780 Call SubmitForm with ContactMethod = Email As We will send link by Email
+            if (EmailValidate(context))
+            {
+                ShowSpinner();
+                model.ContactMethod = "Email";
+                await SubmitForm();
+            }
+        }
+        else
+        {
+          
+            // Handling for "Text" contact method
+            if (eZSendRequest.ContactMethod == "Text")
+            {
+                // UI side validation
+                if (EmailValidateText(context) && UiPhoneValidate(context))
+                {
+                    await ValidatePhone(); // Server-side validation
+                    if (eZSendRequest.isMobilePhone && eZSendRequest.isEmailValid)
+                    {
+                        ShowSpinner();
+                        await SubmitForm();
+                    }
+                    else
+                    {
+                        showPhoneErrorMessage = true;
+                    }
+                }
+            }
+            // Handling for "Email" contact method
+            else if (eZSendRequest.ContactMethod == "Email")
+            {
+                if (EmailValidate(context))
+                {
+                    ShowSpinner();
+                    await SubmitForm();
+                }
+            }
+        }
+        HideSpinner();
+        StateHasChanged();
+    }
+
+    // Method to handle Cancel button click to redirect back to PC
+    private void Redirect()
+    {
+        string returnUrl = model.returnURL + "?jobNumber=" + model.jobNumber + "&status=" + model.Status;
+        NavigationManager.NavigateTo(returnUrl);
+    }
+
+    private void Cancel()
+    {
+        Redirect();
+    }
+
+    private void RedirectToPC()
+    {
+        Redirect();
+    }
+
+    void ShowSpinner()
+    {
+        spinner.Show();
+        StateHasChanged();
+    }
+
+    void HideSpinner(int milliSeconds = 0)
+    {
+        spinner.Stop(milliSeconds);
+        StateHasChanged();
+    }
+
+    private void OnChangeContactMethod(ChangeEventArgs e)
+    {
+        model.ContactMethod = e.Value?.ToString();
+        ResetMessages();
+        StateHasChanged();
+    }
+
+    private bool checkTouched()
+    {
+        if (model.PhoneNumberMessageShown == false)
+        {
+            model.PhoneNumberMessageShown = true;
+            return false;
+
+        }
+        else
+        {
+            return true;    
+        }
+    }
+    private void ResetMessages()
+    {
+        showErrorMessage = false;
+        showSuccessMessage = false;       
+    }
+
+}
+
+

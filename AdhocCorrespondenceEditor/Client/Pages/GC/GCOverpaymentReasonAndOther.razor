@@ -1,0 +1,84 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Overpayment Reason(s)
+    </div> 
+    <div class="panel-body">
+        @foreach(var reason in reasonsOverpayment)
+        {
+            <div class="row col-md-6">
+                <RadzenSwitch id=@("OverpaymentReason"+reason.DocumentDropdownLookupItemId) Change="@(args => OnDenialReasonChanged(args, @reason.DocumentDropdownLookupItemCode))" Style="margin-right:5px"/>  @reason.DocumentDropdownLookupItemCode  
+            </div>
+       }
+
+    <div class="row">
+        <div class="col-md-4">
+            <RadzenSwitch id="OtherReason" @bind-Value=@selectedOtherReason Style="margin-right:5px"/>Other Overpayment Reason:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextBox id="OtherReasonText"   @bind-Value=@otherReason class="@LookupData.GetTextColorClass(otherReason, !selectedOtherReason)" MaxLength="150" Style="width: 100%; max-width: 300px;" />
+        </div>
+    </div>
+  </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsOverpayment = new ();
+    List<string> reasons = new();
+
+    string otherReason  = string.Empty;
+    bool selectedOtherReason = true;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsOverpayment = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsOverpayment), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (selectedOtherReason && string.IsNullOrEmpty(otherReason))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+            if (!selectedOtherReason) //If this option disabled, then nullify the value
+            {
+                otherReason = string.Empty;
+            }
+
+            ((GCUserEntity)LookupData.UserSelection).OverpaymentReason = new List<string>(reasons);
+            ((GCUserEntity)LookupData.UserSelection).OverpaymentReasonOther = otherReason;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

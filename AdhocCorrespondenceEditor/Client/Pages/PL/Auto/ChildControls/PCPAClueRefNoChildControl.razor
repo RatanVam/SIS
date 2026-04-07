@@ -1,0 +1,49 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">
+        Clue Reference Number:
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox class="DropDownSize" @bind-Value=@inputValue />
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    string  inputValue= string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+         if ( ((PLPAUserEntity)LookupData.UserSelection).ClueReferenceNumber == null)
+             ((PLPAUserEntity)LookupData.UserSelection).ClueReferenceNumber = new List<string>();
+       ((PLPAUserEntity)LookupData.UserSelection).ClueReferenceNumber.Add(inputValue?.Trim());
+    }
+
+
+
+}

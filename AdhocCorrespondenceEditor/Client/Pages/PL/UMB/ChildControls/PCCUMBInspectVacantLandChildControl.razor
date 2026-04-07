@@ -1,0 +1,92 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+                <div class="row" > 
+                    <div class="col-md-4">* Lot and Block:</div>
+                   <div class="col-md-4"> <RadzenDropDown class="@LookupData.GetTextColorClass(inspectionVacantLand + inspectionVacantLandInput,  firstRendeValue)"   TValue="ControlClass.Address" Data=@partyVacantLandList Change=@(args => OnInspectionVacantLandChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 300px;">
+                                                         <Template>
+                @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                </Template>
+            </RadzenDropDown>      </div>        
+                   <div class="col-md-4"> <RadzenTextBox class="@LookupData.GetTextColorClass(inspectionVacantLand + inspectionVacantLandInput, firstRendeValue)"  @bind-Value=@inspectionVacantLandInput Disabled ="@(!string.IsNullOrEmpty(inspectionVacantLand))" MaxLength="150" Style="width: 100%; max-width: 300px;"/> </div>
+                </div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    bool isRequired = true;
+    string selectedDriver, inputDriverName = string.Empty;
+    List<ControlClass.Address> partyVacantLandList = new();
+    string inspectionVacantLand, inspectionVacantLandInput = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var locations = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.LocationExposures).Where(y => y.LocationTypeCd == ApplicationConstants.PLVacantLandType)).ToList();
+            partyVacantLandList = PCUMBNamesAddress.GetAddress(locations);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(inspectionVacantLand) && string.IsNullOrEmpty(inspectionVacantLandInput?.Trim()) && isValidate)
+        {
+            LookupData.errorDetails.IsInValid = true;
+        }
+        string tempAddressString = string.Empty;
+        if (string.IsNullOrEmpty(inspectionVacantLand))
+            tempAddressString = inspectionVacantLandInput?.Trim();
+        else
+        {
+            var selectedAddress = partyVacantLandList.Where(x => x.ID == inspectionVacantLand).FirstOrDefault();
+            tempAddressString = string.IsNullOrEmpty(selectedAddress?.Line1Tx) ? string.Empty : selectedAddress.Line1Tx + ' ';
+            tempAddressString += string.IsNullOrEmpty(selectedAddress?.Line2Tx) ? string.Empty : selectedAddress.Line2Tx + ' ';
+            tempAddressString += string.IsNullOrEmpty(selectedAddress?.Line3Tx) ? string.Empty : selectedAddress.Line3Tx + ' ';
+            tempAddressString += string.IsNullOrEmpty(selectedAddress?.Municipality) ? string.Empty : selectedAddress.Municipality + ' ';
+            tempAddressString += string.IsNullOrEmpty(selectedAddress?.CountrySubdivision) ? string.Empty : selectedAddress.CountrySubdivision + ' ';
+            tempAddressString += string.IsNullOrEmpty(selectedAddress?.PostalCd) ? string.Empty : selectedAddress.PostalCd + ' ';
+        }
+            ((PLHoUmbDwUserEntity)LookupData.UserSelection).InspectionVacantLandLocation = tempAddressString;
+    }
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedDriver = myArgs == null ? string.Empty : myArgs.ToString();
+        if (!string.IsNullOrEmpty(selectedDriver))
+            inputDriverName = string.Empty;
+    }
+        public async void OnInspectionVacantLandChanged(object myArgs)
+    {
+        inspectionVacantLand = myArgs == null ? string.Empty : ((ControlClass.Address)myArgs).ID;
+        if (!string.IsNullOrEmpty(inspectionVacantLand))
+            inspectionVacantLandInput = string.Empty;
+    }
+
+}

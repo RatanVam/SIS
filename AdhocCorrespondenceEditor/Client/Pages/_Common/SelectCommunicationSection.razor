@@ -1,0 +1,40 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@*<div class="panel panel-primary">
+    <div class="panel-headingWhite">*@
+        <div class="panel panel-primary" style="background-color:white">
+    <div class="panel-heading" style="background-color:white">
+          <label class="@(LookupData.errorDetails.IsOutputInValid?"lableRed":"lableHeading")">*Select at least one delivery option below</label>
+    </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+    }
+
+
+}

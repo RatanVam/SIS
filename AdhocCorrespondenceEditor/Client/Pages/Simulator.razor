@@ -1,0 +1,341 @@
+﻿@page "/Simulator"
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using System.Text
+@using AdhocCorrespondenceEditor.Shared.BC
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.ACEEntity
+@using System.Xml;
+
+@using System.ComponentModel.DataAnnotations
+@using System.Xml.Serialization
+@using System.Text.Json
+@using AdhocCorrespondenceEditor.Shared.PCMulti
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using AdhocCorrespondenceEditor.Shared.WCU
+@using AdhocCorrespondenceEditor.Shared.GC
+@inject HttpClient Http
+@inject BlazorDisplaySpinnerHandler spinner
+@inject NavigationManager NavigationManager
+@inject StateContainer stateContainer
+
+<div style="top: 50px;
+    position: absolute; width:100%">
+    <EditForm Model="@request" OnValidSubmit="@OnSubmit" id="SimForm" class="mainDivNoboder">
+
+        <RadzenCard class="my-4 mx-auto">
+            <RadzenRow class="rz-text-align-center rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="12"> <h3>ACE Simulator </h3></RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info rz-color-danger" Gap="1rem">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2 rz-color-base-800" Size="3">
+                    <RadzenLabel Component="LOBDropDown" Text="Line of Business:" Style="font-weight:bold; margin-right:5px;" id="LOB_Id" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenDropDown id="LOBDropDown" @bind-Value="request.LOB" TextProperty="LOBName" ValueProperty="LOBName" Data="@LOBEntities" Change="@(OnLobChnaged)" Placeholder="--Select--"></RadzenDropDown>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2 rz-color-base-800" Size="3">
+                    <RadzenLabel Component="AsOfDate" Text="As of date:" Style="font-weight:bold; margin-right:5px;" id="LOB_Id" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenDatePicker id="AsOfDate" @bind-Value="request.AsOfDate" DateFormat="MM/dd/yyyy" Style="max-width: 175px;" Placeholder="MM/DD/YYYY"></RadzenDatePicker>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="State" Text="State:" Style="font-weight:bold; margin-right:5px;" id="State_Id" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextBox id="State" @bind-Value="request.State"></RadzenTextBox>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="EnvDropDown" Text="ESB Environment:" Style="font-weight:bold; margin-right:5px;" id="Env_Id" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2 rz-color-base-800" Size="9">
+                    <RadzenDropDown id="EnvDropDown" @bind-Value="request.Env" TextProperty="Environment" ValueProperty="Environment" Data="@WebServDropdown" Placeholder="--Select--"></RadzenDropDown>
+
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="PolicyNumber" Text="Policy Number:" Style="font-weight:bold; margin-right:5px;" id="PolicyNumber_Label" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextBox id="PolicyNumber" @bind-Value="request.PolicyNumber"></RadzenTextBox>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="QuoteNumber" Text="Quote Number:" Style="font-weight:bold; margin-right:5px;" id="QuoteNumber_Label" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextBox id="QuoteNumber" @bind-Value="request.QuoteNumber"></RadzenTextBox>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="ClaimNumber" Text="Claim Number:" Style="font-weight:bold; margin-right:5px;" id="ClaimNumber_Label" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextBox id="ClaimNumber" @bind-Value="request.ClaimNumber"></RadzenTextBox>
+                </RadzenColumn>
+            </RadzenRow>
+             <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="ProducerCode" Text="Producer code:" Style="font-weight:bold; margin-right:5px;" id="ProducerCode_Label" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextBox id="ProducerCode" @bind-Value="request.ProducerCode"></RadzenTextBox>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                    <RadzenLabel Component="XMLFile" Text="Edit XML:" Style="font-weight:bold; margin-right:5px;" id="EditXML_Id" />
+
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenUpload Change=@OnXMLFileChanged class="w-100" id="XMLFile" ChooseText="Browse" Accept=".xml,.txt"
+                                  InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select file" }})" />
+
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left rz-border-color-info" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenTextArea Name="XMLData" class="w-100" @bind-Value=request.XMLData Rows="10" title="XMLData" Style="overflow:scroll;resize:none;min-height:280px" />
+
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow class="rz-text-align-left" Gap="1rem">
+                <RadzenColumn class="rz-p-2" Size="3">
+                </RadzenColumn>
+                <RadzenColumn class="rz-p-2" Size="9">
+                    <RadzenButton id="button_send" ButtonType="ButtonType.Submit" Text="Create new document" ButtonStyle="ButtonStyle.Secondary" />
+
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
+    </EditForm>
+</div>
+@code {
+    public static Request request;
+    public EditContext editContext;
+    List<LOBEntity> LOBEntities;
+    List<WebServiceEntity> WebServEntities;
+    List<WebServiceEntity> WebServDropdown = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        stateContainer.XMLValue = null;
+        request = new();
+        editContext = new EditContext(request);
+        LOBEntities = (await Http.GetFromJsonAsync<List<LOBEntity>>($"{ApplicationConstants.UrlReferenceDataLob}")).OrderBy(x => x.LOBName)?.ToList();
+        WebServEntities = (await Http.GetFromJsonAsync<List<WebServiceEntity>>($"{ApplicationConstants.UrlLookupWebservice}"))?.ToList();
+    }
+    public void OnSubmit(EditContext context)
+    {
+        string URL = $"Home?LOB={request.LOB}&Env={request.Env}&State={request.State}";
+        stateContainer.XMLValue = request.sourceSystemBaseEntity;
+        if(request.sourceSystemBaseEntity != null)
+        {
+             URL += "&Mode=Simulator";
+        }
+        if (!string.IsNullOrEmpty(request.PolicyNumber))
+        {
+            URL += $"&PolicyNumber={request.PolicyNumber}";
+            if (request.LOB.Contains("PC"))
+            {
+                URL += $"&AsOfDate={request.AsOfDate?.ToString("MM/dd/yyyy")}";
+            }
+        }
+        else if (!string.IsNullOrEmpty(request.ProducerCode))
+        {
+            URL += $"&ProducerCode={request.ProducerCode}";
+        }
+        else if (!string.IsNullOrEmpty(request.ClaimNumber))
+        {
+            URL += $"&ClaimNumber={request.ClaimNumber}";
+        }
+        else if (!string.IsNullOrEmpty(request.QuoteNumber) && request.LOB.Contains("PC"))
+        {
+            URL += $"&QuoteNumber={request.QuoteNumber}&AsOfDate={request.AsOfDate?.ToString("MM/dd/yyyy")}";
+        }
+        else if (!string.IsNullOrEmpty(request.QuoteNumber) && request.LOB.Contains("PC"))
+        {
+            URL += $"&QuoteNumber={request.QuoteNumber}&AsOfDate={request.AsOfDate?.ToString("MM/dd/yyyy")}";
+        }
+       
+        NavigationManager.NavigateTo(URL);
+    }
+
+    public void Dispose()
+    {
+    }
+    async Task OnXMLFileChanged(UploadChangeEventArgs args)
+    {
+        var file = args.Files.FirstOrDefault();
+        request.XMLData = await ReadFile(file);
+
+    }
+    async Task<string> ReadFile(FileInfo file)
+    {
+        string xml = string.Empty;
+        if (file == null)
+            return xml;
+        ShowSpinner();
+        using (var reader = new StreamReader(file.OpenReadStream()))
+        {
+            xml = await reader.ReadToEndAsync();
+        }
+        HideSpinner();
+        return xml;
+    }
+
+    void ShowSpinner()
+    {
+        spinner.Show();
+        StateHasChanged();
+    }
+
+    void HideSpinner(int milliSeconds = 200)
+    {
+        spinner.Stop(milliSeconds);
+        StateHasChanged();
+    }
+    void OnLobChnaged(object LobId)
+    {
+        if (LobId == null)
+            return;
+        WebServDropdown = WebServEntities?.Where(x => x.LOBName == LobId.ToString())?.OrderBy(x => x.Environment)?.DistinctBy(x => x.Environment).ToList();
+    }
+    public class Request
+    {
+        [Required(ErrorMessage = "Please select LOB")]
+        public string LOB { get; set; }
+        [Required(ErrorMessage = "Please enter State")]
+        public string State { get; set; } = "NJ";
+        [ValidateXML(ErrorMessage = "Please check if your XML matches with selected LOB Or If its a valid XML format!")]
+        public string XMLData { get; set; }
+        [Required(ErrorMessage = "Please select ESB Environment")]
+        public string Env { get; set; }
+        public string PolicyNumber { get; set; }
+        public string QuoteNumber { get; set; }
+        public string ProducerCode { get; set; }
+        public string ClaimNumber { get; set; }
+        public string AccountNumber { get; set; }
+        public DateTime? AsOfDate { get; set; } = DateTime.UtcNow;
+        public SourceSystemBaseEntity sourceSystemBaseEntity { get; set; }
+        [ValidateSimulatorForm(ErrorMessage = "Either upload or paste xml or fill policy details")]
+        public  bool VaildateForm { get; set; }
+
+    }
+    public class ValidateSimulatorForm : ValidationAttribute
+    {
+        public override bool IsValid(object value)
+        {
+            if (!string.IsNullOrEmpty(request.PolicyNumber) || !string.IsNullOrEmpty(request.ClaimNumber) || !string.IsNullOrEmpty(request.ProducerCode)
+            || !string.IsNullOrEmpty(request.QuoteNumber)
+                        || !string.IsNullOrEmpty(request.XMLData))
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+    public class ValidateXML : ValidationAttribute
+    {
+        T GetSourceDataFromXMLString<T>(string XMLData)
+        {
+            var serializer = new XmlSerializer(typeof(T));
+            using (TextReader textReader = new StringReader(XMLData))
+            {
+                return (T)serializer.Deserialize(textReader);
+            }
+        }
+
+        void GetSourceSystemDataFromXML(string details)
+        {
+            switch (request.LOB)
+            {
+                case ApplicationConstants.LOB_PC_CA:
+                case ApplicationConstants.LOB_PC_BOP:
+                case ApplicationConstants.LOB_PC_CGL:
+                case ApplicationConstants.LOB_PC_CUMB:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<CLSourceSystemEntity>(details);
+                    request.PolicyNumber =((CLSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyNumber ;
+                    request.QuoteNumber =((CLSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyPeriod.QuoteNumber;
+                    break;
+                case ApplicationConstants.LOB_PC_MULTI:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<PCMultiSourceSystemEntity>(details);
+                    request.AccountNumber =((PCMultiSourceSystemEntity)request.sourceSystemBaseEntity).RetrieveAccountInformationResponseMessage.AccountInformation.AccountNumber;
+                    break;
+                case ApplicationConstants.LOB_BC_PA:
+                case ApplicationConstants.LOB_BC_WCU:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<BCSourceSystemEntity>(details);
+                    request.PolicyNumber =((BCSourceSystemEntity)request.sourceSystemBaseEntity).retrievePolicyInvoiceDetailsOut.AccountInvoices.FirstOrDefault().PolicyPeriodForThisInvoice.PolicyNumber;
+                    request.ProducerCode =((BCSourceSystemEntity)request.sourceSystemBaseEntity).retrievePolicyInvoiceDetailsOut.AccountInvoices.FirstOrDefault().PolicyPeriodForThisInvoice.Policy.ProducerCodeOfService_Ext.Code;
+                    break;
+                case ApplicationConstants.LOB_PC_WCU:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<PCWCUSourceSystemEntity>(details);
+                    request.PolicyNumber =((PCWCUSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyNumber;
+                    request.QuoteNumber =((PCWCUSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyPeriod.QuoteNr;
+                    break;
+                case ApplicationConstants.LOB_PC_UMB:
+                case ApplicationConstants.LOB_PC_HO:
+                case ApplicationConstants.LOB_PC_DW:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<PLSourceSystemEntity>(details);
+                    request.PolicyNumber =((PLSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyNumber;
+                    request.QuoteNumber =((PLSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyPeriod.QuoteNumber;
+                    break;
+                case ApplicationConstants.LOB_PC_PA:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<PLAutoSourceSystemEntity>(details);
+                    request.PolicyNumber =((PLAutoSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyNumber;
+                    request.QuoteNumber =((PLAutoSourceSystemEntity)request.sourceSystemBaseEntity).PolicyData.Policy.PolicyPeriod.QuoteNumber;
+                    break;
+                case ApplicationConstants.LOB_WCC:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<WCCSourceSystemEntity>(details);
+                    request.ClaimNumber =((WCCSourceSystemEntity)request.sourceSystemBaseEntity).Claim.ClaimNumber;
+                    break;
+                case ApplicationConstants.LOB_GC:
+                    request.sourceSystemBaseEntity = GetSourceDataFromXMLString<GCSourceSystemEntity>(details);
+                    request.ClaimNumber =((GCSourceSystemEntity)request.sourceSystemBaseEntity).Claim.ClaimNumber;
+                    break;
+            }
+        }
+        public override bool IsValid(object value)
+        {
+            string xml = Convert.ToString(value);
+            if (string.IsNullOrEmpty(xml)) { return true; }
+
+            xml = xml.Replace("&", "&amp;");
+            try
+            {
+                GetSourceSystemDataFromXML(xml);
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+        }
+    }
+}

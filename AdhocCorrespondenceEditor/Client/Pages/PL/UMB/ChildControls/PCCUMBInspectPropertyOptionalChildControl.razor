@@ -1,0 +1,83 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+                <div class="row"> 
+                    <div class="col-md-4">Risk Location:</div>
+                   <div class="col-md-4"> <RadzenDropDown   TValue="string" Data=@partyAddressList Change=@(args => OnInspectionPropertyChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 300px;">
+                                  <Template>
+                @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                </Template>
+            </RadzenDropDown>      </div>                 
+                       <div class="col-md-4"> <RadzenTextBox  @bind-Value=@inspectionPropertyInput Disabled ="@(!string.IsNullOrEmpty(inspectionProperty))" MaxLength="150" Style="width: 100%; max-width: 300px;"/> </div>
+                </div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    bool isRequired = true;
+    string inspectionProperty, inspectionPropertyInput = string.Empty;
+    List<ControlClass.Address> partyAddressList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var partyRoles = ApplicationConstants.PLCompleteAddressTypes.Split(',').ToList();
+            var locations = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.LocationExposures).Where(y => (partyRoles.Contains(y.LocationTypeCd)))).ToList();
+            partyAddressList = PCUMBNamesAddress.GetAddress(locations);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address tempAddress = new();
+
+        if (string.IsNullOrEmpty(inspectionProperty))
+            tempAddress.Line1Tx = inspectionPropertyInput?.Trim();
+        else
+        {
+            var selectedAddress = partyAddressList.Where(x => x.ID == inspectionProperty).FirstOrDefault();
+
+            tempAddress.Line1Tx = selectedAddress?.Line1Tx;
+            tempAddress.Line2Tx = selectedAddress?.Line2Tx;
+            tempAddress.Line3Tx = selectedAddress?.Line3Tx;
+            tempAddress.MunicipalityNm = selectedAddress?.Municipality;
+            tempAddress.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            tempAddress.PostalCd = selectedAddress?.PostalCd;
+        }
+            ((PLHoUmbDwUserEntity)LookupData.UserSelection).InspectionPropertyLocation = tempAddress;
+    }
+    public async void OnInspectionPropertyChanged(object myArgs)
+    {
+        inspectionProperty = myArgs == null ? string.Empty : ((ControlClass.Address)myArgs).ID;
+        if (!string.IsNullOrEmpty(inspectionProperty))
+            inspectionPropertyInput = string.Empty;
+    }
+
+
+
+}

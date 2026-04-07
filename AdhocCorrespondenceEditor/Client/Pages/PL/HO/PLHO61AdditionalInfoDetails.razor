@@ -1,0 +1,206 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@inject HttpClient Http
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+    <div class="row">
+        <div class="col-md-3">
+            HO-61 Description:
+        </div>
+        <div class="col-md-4">
+            <RadzenDropDown class="DropDownSize300"   TValue="string" Data=@hODescriptionList Change=@(args => OnDescriptionChanged(args))  AllowClear=true  Placeholder="--Select--" >
+            <Template>
+            @($"{context}")        
+            </Template>
+            </RadzenDropDown>
+            <div>    <span class="alert-dangerMsg" hidden="@(hODescriptionList.Count > 0)">@ApplicationConstants.NoDataMsg</span></div>
+         </div>
+         
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@descriptionValue Disabled ="@(!string.IsNullOrEmpty(selectedDescription))" MaxLength="150" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3"><RadzenSwitch @bind-Value=@isFloaterFormSelected />Floater Form
+        </div>
+        <div class="col-md-3">
+            <RadzenSwitch @bind-Value=@isDescAppraisal />Desc Appraisal
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            Number Of:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@numberOfValue MaxLength="150" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            Color/Clarity:
+        </div>
+          <div class="col-md-4">
+            <RadzenDropDown class="DropDownSize300"   TValue="string" Data=@colorClarityList Change=@(args => OnColorClarityChanged(args))  AllowClear=true  Placeholder="--Select--" >
+             <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+         </div>
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@colorClarityValue Disabled ="@(string.IsNullOrEmpty(colorClaritySelected))" MaxLength="150" />
+        </div>
+    </div>
+                <div class="row">
+        <div class="col-md-3"><RadzenSwitch @bind-Value=@isCaratWeight /> Carat Weight
+        </div>
+        <div class="col-md-2">
+            <RadzenSwitch @bind-Value=@isWatch /> Watch
+    </div>
+        </div>
+                            <div class="row">
+        <div class="col-md-3">
+            Weight Of:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@weightOfValue MaxLength="150" />
+    </div>
+        </div>
+                            <div class="row">
+        <div class="col-md-3">
+            Separate Value/Description:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@separateValue MaxLength="150" />
+    </div>
+        </div>
+
+                        <div class="row">
+        <div class="col-md-3">
+            <RadzenSwitch @bind-Value=@iFurs /> Furs
+        </div>
+        <div class="col-md-4">
+            <RadzenSwitch @bind-Value=@isLengthSweep /> Length/Sweep
+    </div>
+            <div class="col-md-3">
+            <RadzenSwitch @bind-Value=@isReceipt /> Receipt
+    </div>
+        </div>
+
+                <div class="row">
+        <div class="col-md-3">
+            Certificates:
+        </div>
+          <div class="col-md-4">
+            <RadzenDropDown class="DropDownSize300"   TValue="string" Data=@certificatesList Change=@(args => OnCertificatesChanged(args))  AllowClear=true  Placeholder="--Select--" >
+             <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+         </div>
+        <div class="col-md-4">
+        <RadzenTextBox class="DropDownSize300"  @bind-Value=@certificatesValue Disabled ="@(!string.IsNullOrEmpty(selectedCertificates))" MaxLength="150" />
+    </div>
+        </div>
+
+        <div class="row">
+        <div class="col-md-3">
+            Certificate Number:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@certificateNumberValue MaxLength="150" />
+    </div>
+        </div>
+
+                <div class="row">
+        <div class="col-md-3">
+            Free Form 1:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextArea class="DropDownSize300"  @bind-Value=@freeFormValue1 MaxLength="250" />
+    </div>
+        </div>
+
+                <div class="row">
+        <div class="col-md-3">
+            Free Form 2:
+        </div>
+        <div class="col-md-4">
+            <RadzenTextArea class="DropDownSize300"  @bind-Value=@freeFormValue2 MaxLength="250" />
+    </div>
+        </div>
+<hr />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string ControlType { get; set; }
+    string selectedDescription,descriptionValue,numberOfValue,colorClaritySelected,colorClarityValue,weightOfValue,separateValue,
+    selectedCertificates,certificatesValue,certificateNumberValue,freeFormValue1,freeFormValue2;
+
+    IEnumerable<DocumentDropdownLookupDataEntity> certificatesList, colorClarityList;
+    List<string> hODescriptionList = new();
+    bool isFloaterFormSelected,isDescAppraisal,payoutAmount, isWatch, isCaratWeight,iFurs,isLengthSweep,isReceipt;
+    DateTime accidentDate;
+    protected override async Task OnInitializedAsync()
+    {
+        hODescriptionList = ((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.Select(y => y.HomeownersLine).SelectMany(x => x.ListedDwellings).SelectMany(z=>z.ScheduledItems).Select(k=>k.ScheduledItemDescriptionTx).ToList();
+
+            certificatesList =(await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{nameof(certificatesList)}/")); 
+            colorClarityList =(await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{nameof(colorClarityList)}/")); 
+
+         LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userData = new HO61Details
+            {
+                ControlType = ControlType,
+                Description = string.IsNullOrEmpty(selectedDescription) ? descriptionValue?.Trim() : selectedDescription,
+                IsFloaterForm = isFloaterFormSelected,
+                IsDescAppraisal = isDescAppraisal,
+                NumberOf = numberOfValue?.Trim(),
+                ColorClarity = colorClaritySelected,
+                ColorClarityText = colorClarityValue?.Trim(),
+                IsCaratWeight = isCaratWeight,
+                IsWatch = isWatch,
+                WeightOf = weightOfValue?.Trim(),
+                SeparateValue = separateValue?.Trim(),
+                IsFurs = iFurs,
+                IsLengthSweep = isLengthSweep,
+                IsReceipt = isReceipt,
+                Certificates = string.IsNullOrEmpty(selectedCertificates) ? certificatesValue?.Trim() : selectedCertificates,
+                CertificateNumber = certificateNumberValue?.Trim(),
+                FreeForm1 = freeFormValue1?.Trim(),
+                FreeForm2 = freeFormValue2?.Trim()
+            };
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).HO61DetailsList.Add(userData);
+    }
+
+    public async void OnDescriptionChanged(object myArgs)
+    {
+        selectedDescription = myArgs == null ? string.Empty : myArgs.ToString();
+        if (!string.IsNullOrEmpty(selectedDescription))
+            descriptionValue = string.Empty;
+    }
+    public async void OnColorClarityChanged(object myArgs)
+    {
+        colorClaritySelected = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+    }
+    public async void OnCertificatesChanged(object myArgs)
+    {
+        selectedCertificates = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        if (!string.IsNullOrEmpty(selectedCertificates))
+            certificatesValue = string.Empty;
+    }
+}

@@ -1,0 +1,90 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Printer Information
+    </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3" >
+                    <label>Printer:</label>
+                </div>
+                <div class="col-md-6">
+                  <RadzenDropDown Name="PrinterName" TValue="PrinterLookupEntity"  id="PrinterId"
+                 Data=@printerDetails TextProperty="PrinterName" ValueProperty="PrinterId" Change=@(args => SelectPrinter(args)) AllowClear=true 
+                 Placeholder="--Select--"  Style="width: 100%; max-width: 400px;" />
+                   <div>  <span class="alert-dangerMsg" hidden="@(printerDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span></div> 
+                 </div>
+                      
+            </div>
+        </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PrinterLookupEntity> printerDetails  = new List<PrinterLookupEntity>();
+    string printerID = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if ((LookupData.printerLookupEntities.Where(x => x.CategoryId == null && x.DocumentId == LookupData.documentData.documentEntity.DocumentId)).Count() > 0)
+                printerDetails = LookupData.printerLookupEntities.Where(x => x.CategoryId == null && x.DocumentId == LookupData.documentData.documentEntity.DocumentId).OrderBy(y => y.PrinterName).ToList();
+            else if ((LookupData.printerLookupEntities.Where(x => x.CategoryId == LookupData.documentData.documentEntity.CategoryId && x.DocumentId == null)).Count() > 0)
+                printerDetails = LookupData.printerLookupEntities.Where(x => x.CategoryId == LookupData.documentData.documentEntity.CategoryId && x.DocumentId == null).OrderBy(y => y.PrinterName).ToList();
+            else
+                printerDetails = LookupData.printerLookupEntities.Where(x => x.CategoryId == null && x.DocumentId == null).OrderBy(y => y.PrinterName).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    public async void SelectPrinter(object myArgs)
+    {
+        printerID = myArgs == null ? string.Empty : myArgs.ToString();
+        StateHasChanged();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(printerID))
+                return;
+
+            ((OutputBase)LookupData.UserSelection).PrinterDetails.PrintInd = printerID;
+            ((OutputBase)LookupData.UserSelection).PrinterDetails.PrinterName = printerDetails.Where(x => x.PrinterId == int.Parse(printerID)).Select(y => y.PrinterName).FirstOrDefault();
+            ((OutputBase)LookupData.UserSelection).PrinterDetails.PrinterCode = printerDetails.Where(x => x.PrinterId == int.Parse(printerID)).Select(y => y.PrinterCode).FirstOrDefault();
+}
+        catch (Exception ex)
+        {
+             Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+}

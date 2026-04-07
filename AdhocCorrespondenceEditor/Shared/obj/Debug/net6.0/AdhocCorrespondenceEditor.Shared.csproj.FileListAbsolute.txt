@@ -1,0 +1,12 @@
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\bin\Debug\net6.0\AdhocCorrespondenceEditor.Shared.deps.json
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\bin\Debug\net6.0\AdhocCorrespondenceEditor.Shared.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\bin\Debug\net6.0\AdhocCorrespondenceEditor.Shared.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.csproj.AssemblyReference.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.AssemblyInfoInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.AssemblyInfo.cs
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.csproj.CoreCompileInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\refint\AdhocCorrespondenceEditor.Shared.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\AdhocCorrespondenceEditor.Shared.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Shared\obj\Debug\net6.0\ref\AdhocCorrespondenceEditor.Shared.dll

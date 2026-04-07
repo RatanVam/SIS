@@ -1,0 +1,47 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">Exposure Type:</div>
+    <div class="col-md-6" ><RadzenTextBox class="DropDownSize" @bind-Value=@exposureType /></div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    [Parameter]
+    public AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.DrivingRecord DrivingRecord { get; set; }
+    string exposureType = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+           AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.DrivingRecord tempDireverDetails= DrivingRecord;
+           tempDireverDetails.ExposureDataSource= exposureType?.Trim();
+
+    }
+
+
+
+}
+

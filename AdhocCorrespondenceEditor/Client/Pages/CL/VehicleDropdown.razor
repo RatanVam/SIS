@@ -1,0 +1,129 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Vehicle Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+               <div class="col-md-3">
+                   Vehicle
+                 </div>
+                <div class="col-md-6">
+                     <RadzenDropDown Name = "VehicleName" TValue="Vehicle" Data=@vehicleList TextProperty="VehicleTradeNm" ValueProperty="VehicleId" Change=@(args => OnVehicleChanged(args)) AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;" >
+                                       <Template>
+            @(context.ModelYearNr + " " + context.VehicleTradeNm + " " + context.ModelNm + " " + context.ManufacturerVehicleIdentificationNr)
+        </Template>
+    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(vehicleList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                    </div>
+            </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<Vehicle> vehicleList = new List<Vehicle>();
+    string vehicleNumber = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+
+            var VehicleCoverageDetails = (((CLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines).Select(x => x.CommercialAutoLine.VehicleCoverageDetails).ToList();
+
+            vehicleList = (from o in VehicleCoverageDetails
+                           from l in o
+                           select l.Vehicle).ToList();
+        }
+        catch(Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    async void OnVehicleChanged(object myArgs)
+    {
+        vehicleNumber = myArgs == null ? string.Empty : myArgs.ToString();
+
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(vehicleNumber))
+            return;
+        var userSelection = ((CLUserEntity)LookupData.UserSelection);
+        userSelection.PCCAVehicle = new PCCAVehicle();
+        var VehicleCoverageDetails = (((CLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines).Select(x => x.CommercialAutoLine.VehicleCoverageDetails).ToList();
+        var selectedVehicle = vehicleList.Where(x => x.VehicleId == vehicleNumber).FirstOrDefault();
+        var detailsCoverages = (from VehicleCoverage in VehicleCoverageDetails
+                                from item in VehicleCoverage
+                                where item.Vehicle.VehicleId == vehicleNumber
+                                select item.Coverages).FirstOrDefault();
+        var AssociatedParties = (from VehicleCoverage in VehicleCoverageDetails
+                                 from item in VehicleCoverage
+                                 where item.Vehicle.VehicleId == vehicleNumber
+                                 select item.AssociatedParties).ToList();
+
+        userSelection.PCCAVehicle.RegisteredTo = (from VehicleCoverage in VehicleCoverageDetails
+                                                                               from item in VehicleCoverage
+                                                                               where item.Vehicle.VehicleId == vehicleNumber
+                                                                               select item.VehicleRegisteredToNm).ToList().FirstOrDefault();
+
+        userSelection.PCCAVehicle.Year = selectedVehicle.ModelYearNr.ToString();
+        userSelection.PCCAVehicle.Make = selectedVehicle.VehicleTradeNm;
+        userSelection.PCCAVehicle.Model = selectedVehicle.ModelNm;
+        userSelection.PCCAVehicle.SerialNumber = selectedVehicle.ManufacturerVehicleIdentificationNr;
+        userSelection.PCCAVehicle.CoverageTypes.AddRange(detailsCoverages.Select(x => new CoverageDetail()
+            {
+                CoverageTypeCd = x.CoverageTypeCd,
+                CoverageParameterTypeCd = x.CoverageParameterTypeCd,
+                CoverageParameterUnformattedValueTx = x.CoverageParameterUnformattedValueTx
+            }));
+        foreach (var partys in AssociatedParties)
+        {
+            foreach (var party in partys)
+            {
+                PCCAVehicleParty vehicleParty = new();
+                vehicleParty.PartyRole = party.PartyRoles;
+
+                if (vehicleParty.PartyRole == null || vehicleParty.PartyRole.Length == 0)
+                    continue;
+                AdhocCorrespondenceEditor.Shared.CL.Address sourceAddress = new();
+
+                if (party.Organization == null)
+                {
+                    sourceAddress = party.Person.Addresses[0].Address;
+                    vehicleParty.Address.DisplayName = party.Person.PersonName.UnparsedNameTx;
+                }
+                else
+                {
+                    sourceAddress = party.Organization.Addresses[0].Address;
+                    vehicleParty.Address.DisplayName = party.Organization.OrganizationNm;
+                }
+                vehicleParty.Address.Line1Tx = sourceAddress.Line1Tx;
+                vehicleParty.Address.Line2Tx = sourceAddress.Line2Tx;
+                vehicleParty.Address.Line3Tx = sourceAddress.Line3Tx;
+                vehicleParty.Address.MunicipalityNm = sourceAddress.Municipality[0].MunicipalityNm;
+                vehicleParty.Address.CountrySubdivisionNm = sourceAddress.CountrySubdivision.CountrySubdivisionNm;
+                vehicleParty.Address.PostalCd = sourceAddress.PostalCd;
+               userSelection.PCCAVehicleParties.Add(vehicleParty);
+            }
+        }
+    }
+}

@@ -1,0 +1,147 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+        @foreach (var obj in checkDetails)
+        {
+            <div class="row">
+                <div class="col-md-4">
+                    Check Number:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" Name="ReferenceNumber" @bind-Value=@obj.Number  MaxLength="75" />
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                   Check Date:
+                </div>
+                <div class="col-md-6">
+                    <RadzenDatePicker class="DropDownSize" @bind-Value=@obj.Date DateFormat="MM/dd/yyyy" Placeholder="mm/dd/yyyy"/>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                    Check Amount:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" @bind-Value=@obj.Amount Placeholder="###.##" MaxLength="150" />
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                   Date of Service:
+                </div>
+                <div class="col-md-6">
+                    <RadzenDatePicker class="DropDownSize"  @bind-Value=@obj.DateOfService DateFormat="MM/dd/yyyy" Placeholder="mm/dd/yyyy"/>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                    Check Overpayment:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" @bind-Value=@obj.Overpayment Change=@(args => OnChangeAmount(args)) Placeholder="###.##" MaxLength="150" />
+                </div>
+            </div>
+
+<hr Style="margin-top:3px"/>
+        }
+            <div class="row col-md-12" hidden="@isSingle">
+                <RadzenButton class="AddRemoveButtons" Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" />
+                <RadzenButton class="AddRemoveButtons" Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+            </div>
+             <div class="row" hidden="@isSingle">
+                <div class="col-md-4">
+                    Total Amount:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" Value="@(totalAmount.ToString())" Disabled=true Placeholder="###.##" MaxLength="150" />
+                </div>
+            </div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    string noofClaimReported = string.Empty;
+
+    List<Check> checkDetails = new List<Check>();
+    double totalAmount = 0;
+    bool isSingle = true;
+    protected override async Task OnInitializedAsync()
+    {
+        isSingle = Reason.Contains("Single");
+        AddNewCCSection();
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (checkDetails.Count == 0)
+            return;
+        var userSelection = (WCCUserEntity)LookupData.UserSelection;
+        userSelection.OverPayCheck = new(); 
+        userSelection.OverPayCheck.AddRange(checkDetails.Select(x => new OverPayCheck
+        {
+            Number = x.Number,
+            Amount = x.Amount,
+            Date = x.Date,
+            DateOfService= x.DateOfService,
+            Overpayment= x.Overpayment
+        }));
+        userSelection.TotalCheckAmount = totalAmount;
+    }
+    void OnChangeAmount(object args)
+    {
+        totalAmount = 0;
+        foreach(var obj in checkDetails)
+        {
+            double temp = 0;
+            if (double.TryParse(obj.Overpayment,out temp))
+                totalAmount += temp;
+        }
+    }
+
+    int indexCount = 0;
+    void AddNewCCSection()
+    {
+        checkDetails.Insert(indexCount, new Check());
+        indexCount = indexCount + 1;
+        StateHasChanged();
+    }
+
+    void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            checkDetails.RemoveAt(indexCount);
+        }
+        StateHasChanged();
+    }
+
+    public class Check
+    {
+        public string Number { get; set; }
+        public DateTime? Date { get; set; }
+        public string Amount { get; set; }
+        public DateTime? DateOfService { get; set; }
+        public string Overpayment { get; set; } = string.Empty;
+    }
+
+}

@@ -1,0 +1,147 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@inject HttpClient Http
+@inject NotificationService NotificationService
+@inject Radzen.DialogService DialogService
+<RadzenStack Orientation="Orientation.Vertical">
+    <RadzenNotification></RadzenNotification>
+    <RadzenDataGrid @ref="printerGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true" EditMode="@DataGridEditMode.Single"
+                    Data="@printers" TItem="PrinterEntity" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" ColumnWidth="200px">
+        <HeaderTemplate>
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Add New Printer" Click="@InsertNewPrinterRow" />
+        </HeaderTemplate>
+        <Columns>
+            <RadzenDataGridColumn Property="PrinterName" Title="Printer Name" Width="200px">
+                <EditTemplate Context="printer">
+                    @{
+
+                        <RadzenTextBox @bind-Value="@printer.PrinterName" Name="PrinterName" Style="width:100%; display: block;" />
+                        <RadzenRequiredValidator Text="Printer name is required" Component="PrinterName" Popup="true" />
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="PrinterCode" Title="Printer Code" Width="200px">
+                <EditTemplate Context="printer">
+                    @{
+
+                        <RadzenTextBox @bind-Value="@printer.PrinterCode" Name="PrinterCode" Style="width:100%; display: block;" />
+                        <RadzenRequiredValidator Text="Printer code is required" Component="PrinterCode" Popup="true" />
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Context="printer" Filterable="false" Sortable="false" TextAlign="TextAlign.Left" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                <Template Context="printer">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@(args => EditRow(printer))"
+                                  @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="printer">
+                    <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(printer))" aria-label="Save">
+                    </RadzenButton>
+                    <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(printer))" aria-label="Cancel">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+@code {
+    RadzenDataGrid<PrinterEntity> printerGrid;
+    IEnumerable<PrinterEntity> printers;
+    AdhocCorrespondenceEditor.Shared.UserData _user;
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Http.GetFromJsonAsync<AdhocCorrespondenceEditor.Shared.UserData>(ApplicationConstants.UrlUser);
+        printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+
+    }
+
+    async Task InsertNewPrinterRow()
+    {
+        var printer = new PrinterEntity();
+        await printerGrid.InsertRow(printer);
+    }
+    async Task EditRow(PrinterEntity printer)
+    {
+        await printerGrid.EditRow(printer);
+    }
+    bool ValidatePrinter(PrinterEntity printer)
+    {
+        return !printers.Any(x => x.PrinterName == printer.PrinterName && x.PrinterCode == printer.PrinterCode);
+    }
+    async Task SaveRow(PrinterEntity printer)
+    {
+        await printerGrid.UpdateRow(printer);
+
+    }
+
+    async Task CancelEdit(PrinterEntity printer)
+    {
+        printerGrid.CancelEditRow(printer);
+        printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+        await printerGrid.Reload();
+
+
+    }
+    async Task OnUpdateRow(PrinterEntity printer)
+    {
+        var edit = await DialogService.Confirm("Editing the printer will affect all references. Proceed?", "Confirm", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" });
+        if (edit == true)
+        {
+            var response = await Http.PostAsJsonAsync<PrinterRequest>($"{ApplicationConstants.UrlUpdatePrinter}", new PrinterRequest()
+                {
+                    PrinterName = printer.PrinterName,
+                    PrinterCode = printer.PrinterCode,
+                    UserId = _user.UserID,
+                    PrinterId = printer.PrinterId
+                });
+            if (response.IsSuccessStatusCode)
+            {
+                printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+                await printerGrid.Reload();
+                ShowNotification("Printer Uppdated successfully", NotificationSeverity.Success);
+            }
+            else
+            {
+                ShowNotification("Failed to update printer", NotificationSeverity.Error);
+
+            }
+        }
+        else
+            await CancelEdit(printer);
+    }
+
+    async Task OnCreateRow(PrinterEntity printer)
+    {
+        var response = await Http.PostAsJsonAsync<PrinterRequest>($"{ApplicationConstants.UrlAddPrinter}", new PrinterRequest()
+            {
+                PrinterName = printer.PrinterName,
+                PrinterCode = printer.PrinterCode,
+                UserId = _user.UserID
+            });
+        if (response.IsSuccessStatusCode)
+        {
+            printers = (await Http.GetFromJsonAsync<List<PrinterEntity>>($"{ApplicationConstants.UrlPrinter}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            await printerGrid.Reload();
+            ShowNotification("Printer Added successfully", NotificationSeverity.Success);
+        }
+        else
+        {
+            ShowNotification("Failed to add printer", NotificationSeverity.Error);
+        }
+    }
+    void ShowNotification(string message, NotificationSeverity severity)
+    {
+
+        NotificationService.Notify(new NotificationMessage
+            {
+                Severity = severity,
+                Duration = 10000,
+                SummaryContent = ns =>
+    @<RadzenText TextStyle="TextStyle.H6">@message</RadzenText>,
+        });
+
+    }
+
+}

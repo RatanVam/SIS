@@ -1,0 +1,74 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Spouse/Partner Name
+    </div>
+    <div class="panel-body">
+<div class="row">
+    <div class="col-md-3">
+         * Spouse or Partner's Name:
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(selectedDriver, firstRendeValue)" @bind-Value="@selectedDriver" Style="width: 100%;max-width: 400px;"  MaxLength="74" />
+    </div>
+</div>
+        </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+
+
+    string selectedDriver;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string[] spousePartnerName;
+            spousePartnerName =  ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(spousePartnerName),LookupData.documentData.documentEntity.DocumentId)?.Split(',');
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            selectedDriver = partyFullList.Where(y => (spousePartnerName.Any(y.PartyRoles.Contains)))?.FirstOrDefault()?.DisplayName;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedDriver))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        ((PLPAUserEntity)LookupData.UserSelection).SpouseParterName = selectedDriver;
+    }
+
+
+}

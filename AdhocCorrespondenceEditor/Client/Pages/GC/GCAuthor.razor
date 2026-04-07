@@ -1,0 +1,125 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Author
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Author:
+                </div>
+                <div class="col-md-9">
+                       <RadzenDropDown Name="Author" TValue="PartyAddressUI" class="@LookupData.GetTextColorClass(partyID, firstRendeValue)" Data=@partyList TextProperty="DisplayName" id="AuthorName"
+                    ValueProperty="PartyID"
+                                Value="@partyID"
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PartyAddressUI> partyList = new();
+    public string selectedPartyId { set; get; }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string authorRoles;
+            authorRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(authorRoles), LookupData.documentData.documentEntity.DocumentId);
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity, includeCurrentUser: true).OrderBy(x => x.DisplayName)?.OrderBy(x=>x.DisplayName)?.ToList();
+            if (!string.IsNullOrEmpty(authorRoles))
+            {
+                var partyRoles = authorRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Any(partyRoles.Contains)).ToList();
+            }
+            var currentUser = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.CurrentUser;
+            if (currentUser != null)
+                partyID = currentUser.id.ToString();
+            OnPartyChanged(partyID);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string partyID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            partyID= (myArgs == null)? string.Empty:myArgs.ToString();
+            SendFromEmailToEmailControl();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    void SendFromEmailToEmailControl()
+    {
+        LookupData.EmailFromControl = partyList.Where(x => x.PartyID == partyID)?.FirstOrDefault()?.ElectronicsDetails?.EmailAddress?.FirstOrDefault();
+        if (LookupData.SendEmailFromControl != null)
+            LookupData.SendEmailFromControl(LookupData.EmailFromControl);
+
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+
+         var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+        if (selectedParty != null)
+        {
+            var faxDetails = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Fax.ToString()).FirstOrDefault();
+            var phoneDetails1 = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString() && x.Category == AddressCategory.Business.ToString()).FirstOrDefault();
+            var phoneDetails2 = selectedParty.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString() && x.Category == AddressCategory.Home.ToString()).FirstOrDefault();
+            userSelection.AuthorDetails = new AuthorDetails
+                {
+                    DisplayName = selectedParty.DisplayName,
+                    Email = selectedParty.ElectronicsDetails?.EmailAddress?.FirstOrDefault(),
+                    FaxDetails = faxDetails == null ? string.Empty : Utility.PhoneFormate(faxDetails.AreaCode, faxDetails.Exchange, faxDetails.Number),
+                    Phone = phoneDetails1 == null ? string.Empty : Utility.PhoneFormate(phoneDetails1.AreaCode, phoneDetails1.Exchange, phoneDetails1.Number),
+                    PhoneExtension = phoneDetails1?.Extension,
+                    AuthorTitle = selectedParty.JobTitle,
+                    Credentials = selectedParty.Creds,
+                    AuthorExecInd = selectedParty.IsOfficeOrManager,
+                    AuthorUID =selectedParty.EmployeeUserName,
+                    AuthorUIDArch=selectedParty.EmployeeUserName,
+                    AdjDirectDial = phoneDetails2 == null ? string.Empty : Utility.PhoneFormate(phoneDetails2.AreaCode, phoneDetails2.Exchange, phoneDetails2.Number)
+                };
+        }
+    }
+
+}

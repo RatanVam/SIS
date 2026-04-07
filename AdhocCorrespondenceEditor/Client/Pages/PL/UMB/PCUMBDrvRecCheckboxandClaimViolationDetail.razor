@@ -1,0 +1,143 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="row">
+    <div class="row">
+    <div class="col-md-3">
+        Driver Name:
+        </div>
+            <div class="col-md-6">
+        <RadzenDropDown class="DropDownSize300"   TValue="PartyAddressUI" Data=@partyList Change=@(args => OnNameChanged(args)) TextProperty="DisplayName" ValueProperty="PartyID" AllowClear=true  Placeholder="--Select--" >
+    </RadzenDropDown>
+    </div>
+        </div>
+    <div class="row">
+            <div class="col-md-3"> </div>
+            <div class="col-md-6"style="margin-top:5px"> <RadzenTextBox class="DropDownSize300"  @bind-Value=@driverText Disabled ="@(!string.IsNullOrEmpty(selectedDriver))" MaxLength="150" /> </div>
+        </div>
+                            <div class="row">
+            <div class="col-md-3"style="margin-top:5px">  Activity Description:</div>
+    <div class="col-md-6"style="margin-top:5px"> <RadzenTextBox class="DropDownSize300"  @bind-Value=@activityDiscription   Disabled =@GetDisabledStatus() MaxLength="150" /> </div>
+        </div>
+                            <div class="row">
+            <div class="col-md-3"style="margin-top:5px">   Adverse Data Source:</div>
+    <div class="col-md-6"style="margin-top:5px"> <RadzenDropDown class="DropDownSize300"   TValue="string" Data=@AdverseDataSourc Change=@(args => OnAdverseDataChanged(args)) AllowClear=true   Disabled =@GetDisabledStatus() Placeholder="--Select--" >
+         <Template>
+    @($"{context.DocumentDropdownLookupItemCode}")        
+    </Template>
+    </RadzenDropDown>
+    </div>
+        </div>
+                  
+                                                    <div class="row">
+            <div class="col-md-3"style="margin-top:5px">    Event Date:</div>
+    <div class="col-md-6"style="margin-top:5px"> <RadzenDatePicker TValue="DateTime"  class="DropDownSize300" DateFormat="yyyy-MM-dd"  Change=@(args => OnEventDateChange(args))   Disabled =@GetDisabledStatus() /> </div>
+        </div>
+
+                                                    <div class="row">
+            <div class="col-md-3"style="margin-top:5px">   Posting/Payout Date:</div>
+    <div class="col-md-6"style="margin-top:5px"> <RadzenDatePicker TValue="DateTime"  class="DropDownSize300" DateFormat="yyyy-MM-dd" Change=@(args => OnPayoutDateChange(args))   Disabled =@GetDisabledStatus()/> </div>
+        </div>
+
+                                                    <div class="row">
+            <div class="col-md-3"style="margin-top:5px">   MVR Reference Number:</div>
+    <div class="col-md-6"style="margin-top:5px"> <RadzenTextBox class="DropDownSize300"  @bind-Value=@mVRReference MaxLength="150"   Disabled =@GetDisabledStatus()/> </div>
+        </div>
+ </div>
+<hr />
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedDriver = string.Empty;
+    string adverseDataSource = string.Empty;
+    string driverText = string.Empty;
+    string activityDiscription = string.Empty;
+    string mVRReference = string.Empty;
+    List<PartyAddressUI> partyList = new();
+    List<DocumentDropdownLookupDataEntity> AdverseDataSourc = new();
+    DateTime payoutDate, eventDate;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var driverInfoTypes = ApplicationConstants.PLDriverInfoTypes.Split(',').ToList();
+            var  driverInfo = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.HouseholdMembers).Where(y => (driverInfoTypes.Contains(y.Person.VehicalDriverLicense.LicenseStatusCd)))).ToList();
+            partyList = PCUMBNamesAddress.GetPersonName(driverInfo);
+            AdverseDataSourc = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{nameof(AdverseDataSourc)}/"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(driverText?.Trim()))
+            return;
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.DrivingRecordDetails == null)
+            userSelection.DrivingRecordDetails = new();
+
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.DrivingRecord tempDireverDetails = new();
+
+        tempDireverDetails.ActivityDescription = activityDiscription?.Trim();
+        tempDireverDetails.AdverseDataSource = adverseDataSource;
+        tempDireverDetails.EventDate = eventDate;
+        tempDireverDetails.PostingPayoutDate = payoutDate;
+        tempDireverDetails.MVRReferenceNumber = mVRReference?.Trim();
+        tempDireverDetails.DriverName = string.IsNullOrEmpty(selectedDriver) ? driverText?.Trim() : selectedDriver;
+        tempDireverDetails.mvrDrivingName = string.IsNullOrEmpty(selectedDriver) ? driverText?.Trim() : selectedDriver;
+        userSelection.DrivingRecordDetails.Add(tempDireverDetails);
+    }
+
+    public async void OnNameChanged(object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            selectedDriver = string.Empty;
+        else
+            selectedDriver = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(selectedDriver))
+            driverText = string.Empty;
+    }
+
+    public async void OnAdverseDataChanged(object myArgs)
+    {
+        adverseDataSource = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+
+    }
+
+    void OnEventDateChange(object myArgs)
+    {
+        if(myArgs!=null)
+            eventDate = (DateTime)myArgs;
+    }
+    void OnPayoutDateChange(object myArgs)
+    {
+        if (myArgs != null)
+            payoutDate = (DateTime)myArgs;
+    }
+
+    bool GetDisabledStatus()
+    {
+        return string.IsNullOrEmpty(selectedDriver) && string.IsNullOrEmpty(driverText);
+    }
+}

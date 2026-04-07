@@ -1,0 +1,134 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+
+                    <div class="row">
+                <div class="col-md-3">
+                   <RadzenSwitch @bind-Value=@enabled /> Year/MOD 
+                </div>
+                <div class="col-md-6">
+             <span>Must enter at least one pair of value</span>
+                </div>
+            </div>
+
+
+                <div class="row">
+                <div class="col-md-3">
+                   * Year:
+                </div>
+                <div class="col-md-6">
+            <RadzenTextBox class="@LookupData.GetTextColorClass(yearValue, !enabled)"  @bind-Value=@yearValue Disabled ="@(!enabled)" Placeholder="YYYY" MaxLength="4" 
+           onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))"  Style="width: 100%; max-width: 400px;"/>
+                </div>
+            </div>
+                <div class="row">
+                <div class="col-md-3">
+                  * Mod:
+                </div>
+                <div class="col-md-6">
+            <RadzenTextBox class="@LookupData.GetTextColorClass(modValue, !enabled)"  @bind-Value=@modValue Disabled ="@(!enabled)" MaxLength="40"  Style="width: 100%; max-width: 400px;"/>
+                </div>
+            </div>
+            <div class="row" hidden="@isDateHidden">
+                <div class="col-md-3">
+                    * Mod Eff Date:
+                </div>
+                <div class="col-md-6">
+                    <RadzenDatePicker TValue="DateTime" class="@LookupData.GetTextColorClassCalander((startDate == DateTime.MinValue)?string.Empty:"1", !enabled)" 
+                    Disabled ="@(!enabled)" DateFormat="yyyy-MM-dd" Placeholder="YYYY-MM-DD" Change=@(args => OnModEffDateChange(args))  Style="width: 100%; max-width: 400px;"/>
+                </div>
+                </div>
+
+
+                <div class="row" hidden="@isDateHidden">
+                    <div class="col-md-3">
+                       * Mod Exp Date
+                    </div>
+                    <div class="col-md-6">
+                      <RadzenDatePicker TValue="DateTime" class="@LookupData.GetTextColorClassCalander((endDate == DateTime.MinValue)?string.Empty:"1", !enabled)"  
+                          Disabled ="@(!enabled)" DateFormat="yyyy-MM-dd" Placeholder="YYYY-MM-DD" Change=@(args => OnModExpDateChange(args)) Style="width: 100%; max-width: 400px;"/>
+
+                    </div>
+    </div>
+
+</div>
+
+
+<hr />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    bool enabled = false;
+    string yearValue = string.Empty;
+    string modValue = string.Empty;
+    DateTime startDate;
+    DateTime endDate;
+    bool isDateHidden = true;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (LookupData.documentData.documentEntity.DocumentFriendlyName == ApplicationConstants.DocNameExpModLetterBiddingDates)
+                isDateHidden = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (!enabled)
+            return;
+        if (isValidate && (string.IsNullOrEmpty(yearValue) || string.IsNullOrEmpty(modValue) || !isDateHidden && (startDate == DateTime.MinValue || endDate == DateTime.MinValue)))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((PCWCUUserEntity)LookupData.UserSelection);
+        userSelection.ModeValues.Add(new ModeValues
+        {
+            MOD = modValue?.Trim(),
+            Year = yearValue?.Trim(),
+            ModEffDate = startDate,
+            ModExpDate = endDate
+        });
+    }
+    void OnModEffDateChange(object myArgs)
+    {
+        if(myArgs!=null)
+            startDate = (DateTime)myArgs;
+    }
+
+    void OnModExpDateChange(object myArgs)
+    {
+        if (myArgs != null)
+            endDate = (DateTime)myArgs;
+    }
+}

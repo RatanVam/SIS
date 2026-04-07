@@ -1,0 +1,73 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-12"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+            <div class="row">
+                 <div class="col-md-5">
+                <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px" hidden=@(indexCount>maxRecords-1 )/>
+                <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px" hidden=@(indexCount==1)/>
+                </div>
+            </div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+         selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{controlName}"));
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+
+    }
+
+     int indexCount = 1;
+    int maxRecords = 7;
+    List<Type> selectedList= new ();
+    string controlName = "PCCUMBDriverRecordChildControl";
+    public async void AddNewCCSection()
+    {
+        if(indexCount < maxRecords)
+        {
+            indexCount = indexCount + 1;
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{controlName}"));
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            selectedList.RemoveAt(indexCount);
+        }
+        StateHasChanged();
+    }
+}

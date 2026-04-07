@@ -1,0 +1,78 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Information for Additional Treatment
+    </div> 
+    <div class="panel-body">
+
+        @foreach(var reason in reasonsAdditionalTreatmentWCC)
+        {<div class="row" style="margin-left:5px">
+                <RadzenSwitch Change="@(args => OnAddTreatmentReasonChanged(args, @reason.DocumentDropdownLookupItemValue))" Style="margin-right:3px"/>  @reason.DocumentDropdownLookupItemCode  
+          </div>
+       }
+        <div class="row">
+             <div class="col-md-3">
+            Other Info for Additional Treatment:
+            </div>
+              <div class="col-md-6">
+        <RadzenTextBox class="Dropdown" @bind-Value=@additionalTreatment Style="width: 100%; max-width: 400px;" MaxLength="150" />
+              </div>
+        </div>
+
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsAdditionalTreatmentWCC = new ();
+    List<string> reasons = new();
+
+    string additionalTreatment = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsAdditionalTreatmentWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsAdditionalTreatmentWCC), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            ((WCCUserEntity)LookupData.UserSelection).AdditionalTreatment = new();
+            ((WCCUserEntity)LookupData.UserSelection).AdditionalTreatment.AddRange(reasons);
+            ((WCCUserEntity)LookupData.UserSelection).AdditionalTreatmentOther = additionalTreatment;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnAddTreatmentReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

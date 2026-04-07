@@ -1,0 +1,88 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        *Licensed Driver(s)
+    </div>
+    <div class="panel-body">
+         @foreach(var obj in partyList)
+         {
+            <div class="row" style="margin-top: 2px;margin-left: 5px">
+                <RadzenSwitch Change="@(args => OnDriverChanged(args, obj.id))"/> @obj.Party.Person.PersonName.FirstGivenNm @obj.Party.Person.PersonName.FamilyNm @obj.Party.Person.PersonName.FamilyNameGenerationCd, @obj.Party.Person.BirthDt.ToString("yyyy-MM-dd") 
+            </div>
+         }
+        </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+
+    List<string> selectedDriver= new();
+    List<PartyListing> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            partyList = ((PLAutoSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.ListedParties.Where(
+                x => x.Party.Person.VehicleDriverLicense.LicenseStatusCd == "International" || 
+                x.Party.Person.OfficialIdentifications.Any(y => y.IdentificationTypeCd == "Driver License")).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (selectedDriver.Count == 0)
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+        if (((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails == null)
+            ((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails = new List<PolDriveInfo>();
+        foreach (var partyID in selectedDriver)
+        {
+            var obj = partyList.Where(x => x.id == partyID).FirstOrDefault();
+            if (obj != null)
+            {
+                ((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails.Add(new PolDriveInfo
+                    {
+                        DriverName = $"{@obj.Party.Person.PersonName.FirstGivenNm} {@obj.Party.Person.PersonName.FamilyNm} {@obj.Party.Person.PersonName.FamilyNameGenerationCd}",
+                        DriverDOBYear = obj.Party.Person.BirthDtSpecified ? obj.Party.Person.BirthDt.Year : null,
+                    });
+            }
+        }
+    }
+    public async void OnDriverChanged(bool value, string id)
+    {
+        if (value)
+            selectedDriver.Add(id);
+        else
+            selectedDriver.Remove(id);
+
+    }
+
+ 
+
+}

@@ -1,0 +1,113 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+         DME Information
+    </div> 
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+            DME Details
+            </div>
+            <div class="col-md-6">
+            Status
+            </div>
+        </div>
+        <hr />
+        @foreach(var reason in detailDMD)
+        {<div class="row">
+            <div class="col-md-4" style="margin-left:5px">
+                <RadzenSwitch Style="margin-right:5px;" Change="@(args => OnDenialReasonChanged(args, @reason.ID))" />  @reason.DisplayName?.Substring(0,(reason.DisplayName.Length >20)?20:reason.DisplayName.Length)  
+            </div>
+             <div class="col-md-4">
+            <RadzenDropDown class="DropDownSize" TValue="string" Disabled="@(!selectedDMDs.Contains(reason.ID))" @bind-Value=reason.EquipmentStatus Data=@reasonsDMEWCC  AllowClear=false > </RadzenDropDown>@*Change=@(args => OnStatusChanged(reason, args))*@
+            </div>
+        </div>
+       }
+            
+
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<string> reasonsDMEWCC = new();
+    List<DMDInfo> detailDMD = new();
+    List<int> selectedDMDs = new();
+        
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsDMEWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsDMEWCC), LookupData.documentData.documentEntity.DocumentId)}/"))?.Select(x=>x.DocumentDropdownLookupItemValue).Distinct().ToList();
+        detailDMD = (((WCCSourceSystemEntity)LookupData.SourceSystemEntity).Claim?.DMEDetails)?.Select(x => new DMDInfo
+            {
+                DMENotes = x.Notes,
+                EquipmentDetails = x.EquipmentDetails,
+                ID = x.id,
+                EquipmentStatus = reasonsDMEWCC?.FirstOrDefault(),
+                DisplayName = ($"{x.Notes}-{x.EquipmentDetails}")
+        }).ToList();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (selectedDMDs.Count==0)
+                return;
+            var userDetails = ((WCCUserEntity)LookupData.UserSelection);
+            userDetails.DMEs = new ();
+            foreach(var dmd in selectedDMDs)
+            {
+                var tempDMD = detailDMD.Where(x => x.ID == dmd).FirstOrDefault();
+                userDetails.DMEs.Add(new DME
+                    {
+                        DMENotes = tempDMD?.DMENotes,
+                        EquipmentDetails = tempDMD?.EquipmentDetails,
+                        EquipmentStatus = tempDMD?.EquipmentStatus
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void OnDenialReasonChanged(bool isSelected, int myArgs)
+    {
+        if (isSelected)
+            selectedDMDs.Add(myArgs);
+        else
+            selectedDMDs.Remove(myArgs);
+    }
+
+    class DMDInfo
+    {
+        public int ID { get; set; }
+        public string DMENotes { get; set; }
+        public string EquipmentDetails { get; set; }
+        public string EquipmentStatus { get; set; }
+        public string DisplayName { get; set; }
+    }
+
+}

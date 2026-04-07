@@ -1,0 +1,60 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="row">
+    <div class="col-md-3">
+        * Violation Reason Indicator:
+    </div>
+    <div class="col-md-4">
+                    <RadzenDropDown  class="@LookupData.GetTextColorClass(reason, firstRendeValue)"  TValue="string" Data=@reasonViolationList Change=@(args => OnReasonChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    DateTime? eventDate;
+    IEnumerable<DocumentDropdownLookupDataEntity>  reasonViolationList;
+    protected override async Task OnInitializedAsync()
+    {
+        reasonViolationList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonViolationList), LookupData.documentData.documentEntity.DocumentId)}/"));
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (String.IsNullOrEmpty(reason))
+            LookupData.errorDetails.IsInValid = isValidate;
+        else
+            ((PLPAUserEntity)LookupData.UserSelection).ViolationReasonInd = reason;
+    }
+
+    string reason;
+    public async void OnReasonChanged(object myArgs)
+    {
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+    }
+}

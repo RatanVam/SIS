@@ -1,0 +1,190 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.BC
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3 margin-top-controls" >
+        <RadzenSwitch @bind-Value=@enabled />
+    </div>
+    <div class="col-md-9">
+                <div class="margin-top-controls  row" >
+                     <RadzenDropDown class="DropDownSize" TValue="PolicyPeriodContact" Data=@partyNames TextProperty="DisplayName" 
+                    ValueProperty="DisplayName" Change=@(args => OnAttentionNameChanged(args)) Disabled ="@(!enabled)" AllowClear=true  Placeholder="--Select--"/>
+                    <span class="alert-dangerMsg" hidden="@(partyNames.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+
+        </div>
+        <div class="margin-top-controls  row" >
+            <RadzenDropDown class="@LookupData.GetTextColorClass(displayName, !enabled)"
+            TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+            Change=@(args => OnPartyChanged(args)) Disabled ="@(!enabled)" AllowClear=true  Placeholder="--Select--" 
+            Style="width: 100%; max-width: 400px;"/>
+        </div>
+        <div><span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span></div>  
+        <div class="margin-top-controls  row" >
+            <RadzenDropDown @ref="childComponent" class="@LookupData.GetTextColorClass(selectedAddressID, !enabled)" TValue="ControlClass.Address" 
+            Data=@partyAddresses TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) Disabled ="@(!enabled)" 
+            AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;"> 
+                <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                </Template>
+            </RadzenDropDown>
+        </div>
+            <div><span class="alert-dangerMsg" hidden="@(partyAddresses.Count > 0 || string.IsNullOrEmpty(displayName))">@ApplicationConstants.NoDataMsg</span>
+        </div> 
+    </div>
+</div>
+
+
+<br />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+    List<PartyAddressUI> partyList = new();
+    List<ControlClass.Address> partyAddresses  = new List<ControlClass.Address>();
+
+    bool enabled = false;
+    string selectedAddressID = string.Empty;
+    List<PolicyPeriodContact> partyNames = new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (((BCSourceSystemEntity)LookupData.SourceSystemEntity).retrieveProducerStatementDetailsOut != null)
+            {
+                partyList = GetProducerPartyAddress(LookupData.SourceSystemEntity);
+                var partyObj = ((BCSourceSystemEntity)LookupData.SourceSystemEntity).retrieveProducerStatementDetailsOut.ProducerStatments.Select(y => y.Producer);
+                partyNames = partyObj.Select(x => new PolicyPeriodContact
+                    {
+                        DisplayName = x.Name,
+                    }).ToList();
+            }
+            partyNames = partyNames.DistinctBy(x => x.DisplayName).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    List<PartyAddressUI> GetProducerPartyAddress(SourceSystemBaseEntity systemBaseEntity)
+    {
+        List<PartyAddressUI> partyList = new();
+        List<Producer1> contacts = ((BCSourceSystemEntity)systemBaseEntity).retrieveProducerStatementDetailsOut.ProducerStatments.Select(x => x.Producer).ToList();
+        partyList.AddRange(contacts.Select(x => new PartyAddressUI
+            {
+                PartyID = x.Name.ToString(),
+                DisplayName = x.Name,
+                PartyAddresses = new List<ControlClass.Address>(new ControlClass.Address[] {new ControlClass.Address
+                    {
+                        AddresseeNameLine1Tx = x.Address_Ext?.AddressLine1,
+                        AddresseeNameLine2Tx =  x.Address_Ext?.AddressLine2,
+                        Line1Tx =  x.Address_Ext?.AddressLine1,
+                        Line2Tx =  x.Address_Ext?.AddressLine2,
+                        Line3Tx =  x.Address_Ext?.AddressLine3,
+                        PostalCd =  x.Address_Ext?.PostalCode,
+                        CountrySubdivision = x.Address_Ext?.State.Code,
+                        Municipality =x.Address_Ext?.City,
+                        ID =x.Address_Ext?.id.ToString(),
+                    } }),
+            }).ToList());
+
+        return partyList;
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (!enabled)
+            return;
+        isErrorVisable = isValidate;
+        if (isValidate && string.IsNullOrEmpty(selectedAddressID) || string.IsNullOrEmpty(displayName))
+        {
+            LookupData.errorDetails.IsInValid = true;
+        }
+        else
+        {
+            var selectedAddress = partyAddresses.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+
+            CopyToSection ccToSection = new CopyToSection()
+                {
+                    CopyToCompanyName = attentionName,
+                    CopyToAddressLine1 = selectedAddress?.Line1Tx,
+                    CopyToAddressLine2 = selectedAddress?.Line2Tx,
+                    CopyToAddressLine3 = selectedAddress?.Line3Tx,
+                    CopyToName = displayName,
+                    CopyToCity = selectedAddress?.Municipality,
+                    CopyToState = selectedAddress?.CountrySubdivision,
+                    CopyToZIP = selectedAddress?.PostalCd,
+                };
+            ((OutputBase)LookupData.UserSelection).CopiesTo.Add(ccToSection);
+        }
+    }
+
+    string displayName = string.Empty;
+    bool isErrorVisable = false;
+    PartyAddressUI selectedParty;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                displayName = string.Empty;
+                selectedParty = null;
+                partyAddresses = new List<ControlClass.Address>();
+            }
+            else
+            {
+                selectedParty = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault();
+                displayName = selectedParty.DisplayName;
+                partyAddresses = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault().PartyAddresses;
+            }
+            foreach (var cntl in components)
+                cntl.Reset();
+            selectedAddressID = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        StateHasChanged();
+    }
+
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+        string attentionName = string.Empty;
+    public async void OnAttentionNameChanged(object myArgs)
+    {
+         attentionName = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+}

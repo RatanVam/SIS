@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="Pages\GC\GCTreatmentDates.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.9" />
+	  <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.0" />
+	  <PackageReference Include="Radzen.Blazor" Version="4.31.5" />
+	<PackageReference Include="System.Net.Http.Json" Version="3.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\AdhocCorrespondenceEditor.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Pages\GC\ChildControls\" />
+    <Folder Include="Pages\PC-WCU\" />
+    <Folder Include="Pages\PL\DW\" />
+    <Folder Include="Pages\PL\UMB\ChildControls\" />
+    <Folder Include="Pages\PL\HO\" />
+    <Folder Include="Pages\WCC\ChildControls\" />
+    <Folder Include="Rules\BillingCenter\" />
+    <Folder Include="Rules\CommercialLines\" />
+    <Folder Include="wwwroot\js\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,132 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Business Use of Property
+    </div>
+    <div class="panel-body">
+               <div class="row">
+                <div class="col-md-3">
+                   Risk Location Address
+                </div>
+                 <div class="col-md-4">
+                     <RadzenDropDown class="DropDownSize300"   TValue="ControlClass.Address" Data=@partyList TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                        </Template>
+                    </RadzenDropDown>
+
+                </div>
+                 <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize300"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedAddressID))" MaxLength="150" />
+                </div>
+            </div>
+            <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"><RadzenSwitch  @bind-Value=@businessType Disabled =@GetDisabledStatus()/> Type of Business/Farm </div>
+            <div class="col-md-4"style="margin-top:5px"><RadzenSwitch  @bind-Value=@telecommuting Disabled =@GetDisabledStatus()/> Telecommuting </div></div>
+            <div class="row"> <div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"><RadzenSwitch  @bind-Value=@numberofClients Disabled =@GetDisabledStatus()/> Number of Clients/Customers </div>
+        <div class="col-md-4"style="margin-top:5px"><RadzenSwitch  @bind-Value=@numberofEmployees Disabled =@GetDisabledStatus()/> Number of Employees </div></div>
+            <div class="row"> <div class="col-md-3"></div> <div class="col-md-4"style="margin-top:5px"><RadzenSwitch  @bind-Value=@advertising Disabled =@GetDisabledStatus()/> Advertising </div></div>
+
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedAddressID = string.Empty;
+    string addressValue = string.Empty;
+    List<ControlClass.Address> partyList = new();
+
+    bool  businessType= false;
+    bool telecommuting= false;
+    bool numberofClients= false;
+    bool numberofEmployees= false;
+    bool advertising = false;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var partyRoles = ApplicationConstants.PLCompleteAddressTypes.Split(',').ToList();
+            var  locations = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.LocationExposures).Where(y => (partyRoles.Contains(y.LocationTypeCd)))).ToList();
+            partyList = PCUMBNamesAddress.GetAddress(locations);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.BusinessDetails == null)
+            userSelection.BusinessDetails = new();
+
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.BusinessUseDetails tempBusinessUseDetails = new();
+        if (string.IsNullOrEmpty(selectedAddressID) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+        if (string.IsNullOrEmpty(selectedAddressID))
+        {
+            tempBusinessUseDetails.CompleteAddresses.Line1Tx = addressValue?.Trim();
+        }
+        else
+        {
+            var selectedAddress = partyList.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+
+            tempBusinessUseDetails.CompleteAddresses.Line1Tx = selectedAddress?.Line1Tx;
+            tempBusinessUseDetails.CompleteAddresses.Line2Tx = selectedAddress?.Line2Tx;
+            tempBusinessUseDetails.CompleteAddresses.Line3Tx = selectedAddress?.Line3Tx;
+            tempBusinessUseDetails.CompleteAddresses.MunicipalityNm = selectedAddress?.Municipality;
+            tempBusinessUseDetails.CompleteAddresses.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            tempBusinessUseDetails.CompleteAddresses.PostalCd = selectedAddress?.PostalCd;
+        }
+        tempBusinessUseDetails.BusinessType = businessType;
+        tempBusinessUseDetails.Telecommuting = telecommuting;
+        tempBusinessUseDetails.NumberofClients = numberofClients;
+        tempBusinessUseDetails.NumberofEmployees = numberofEmployees;
+        tempBusinessUseDetails.Advertising = advertising;
+        userSelection.BusinessDetails.Add(tempBusinessUseDetails);
+    }
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+        if (!string.IsNullOrEmpty(selectedAddressID))
+            addressValue = string.Empty;
+        else
+            ResetRadioButtons();
+    }
+    public async void OnTextChanged(object myArgs)
+    {
+        if (string.IsNullOrEmpty(selectedAddressID)&& string.IsNullOrEmpty(addressValue) )
+        ResetRadioButtons();
+    }
+    async void ResetRadioButtons()
+    {
+        businessType= telecommuting= numberofClients= numberofEmployees= advertising= false;
+    }
+    bool GetDisabledStatus()
+    {
+        return string.IsNullOrEmpty(selectedAddressID) && string.IsNullOrEmpty(addressValue);
+    }
+
+
+
+}

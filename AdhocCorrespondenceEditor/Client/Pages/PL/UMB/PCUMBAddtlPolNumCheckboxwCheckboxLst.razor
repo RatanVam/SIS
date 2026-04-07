@@ -1,0 +1,73 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Additional Policy Number(s)
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                    Policy Number(s)
+                </div>
+                <div class="col-md-6">
+                     @foreach (var policyNumber in policyNumbers)
+                     {
+                         <div class="col-md-6" style="padding-bottom: 2px">
+                        <RadzenSwitch Change="@(args => PolicyNumberSelected(args, policyNumber))"/>   @policyNumber 
+                        </div>
+                     }
+                 <span class="alert-dangerMsg" hidden="@(policyNumbers.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<string> policyNumbers = new List<string>();
+    List<string> policyNumberSelected = new List<string>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            policyNumbers = ApplicationClassUtility.GetPLPolicyNumbers(LookupData.SourceSystemEntity);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLOutputBase)LookupData.UserSelection);
+            userSelection.PolicyNumberSelected = policyNumberSelected;
+    }
+
+    void PolicyNumberSelected(bool value, string policyNumber)
+    {
+        if (value)
+            policyNumberSelected.Add(policyNumber);
+        else
+            policyNumberSelected.Remove(policyNumber);
+    }
+    }

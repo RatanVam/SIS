@@ -1,0 +1,89 @@
+<!-- Created with Liquid XML 2016 Designer Edition 14.1.5.6733 (https://www.liquid-technologies.com) --><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://www.gmc.net/Phoenix/Integration">
+	<soapenv:Header>
+		<wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+			<wsse:UsernameToken wsu:Id="UsernameToken-2" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+				<wsse:Username>System</wsse:Username>
+				<wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">pass</wsse:Password>
+			</wsse:UsernameToken>
+		</wsse:Security>
+	</soapenv:Header>
+	<soapenv:Body>
+		<int:CreateTicket2Request>
+			<int:Ticket>
+				<!--One or more repetitions for single or multiple documents in one ticket. -->
+				<int:Document>
+					<!--Enter the Inspire Content Manager path to the JLD file from which the ticket will be created. The path can contain further specification, e.g. state:label.If you only specify the file name, e.g. companyRoot://Templates/Vital_CS_GenericLetter.jld, it points to the head version of the file in Inspire Content Manager.-->
+					<int:Template>companyRoot:S:Production://Templates/CommercialLines/CL Blank Letter Template.jld</int:Template>
+					<int:DataDefinition>
+						<int:ModuleName>XMLDataInput1ExternalWorkflow1</int:ModuleName>
+						<int:Source>
+							<int:XmlData><CustomerData>
+  <RecordDelim>
+    <AccountRecord>
+      <NJMAccountNumber>AA700281914</NJMAccountNumber>
+      <Environment>Dev</Environment>
+      <SourceSystem>ADHOC</SourceSystem>
+      <OnBaseKeyword1>A</OnBaseKeyword1>
+      <LineOfBusiness>Commercial Automobile</LineOfBusiness>
+      <CLDocSource>OUTGOING</CLDocSource>
+      <Tag4>Policy Number:</Tag4>
+      <Tag4Num>004:</Tag4Num>
+      <Value4>1600243455</Value4>
+      <Tag6>Account Number:</Tag6>
+      <Tag6Num>080:</Tag6Num>
+      <Value6>AA700281914</Value6>
+      <Tag12>Line of Business:</Tag12>
+      <Tag12Num>002:</Tag12Num>
+      <Value12>Commercial Auto</Value12>
+      <CurrentDate>September 15,2023</CurrentDate>
+      <PackageName>CL Blank Letter Template</PackageName>
+      <OutboundDocType>CL  Correspondence</OutboundDocType>
+      <CreatorID>561364</CreatorID>
+      <CREATOR_INT>5</CREATOR_INT>
+      <INS_CO_NM />
+      <AddresseeName>TD BANK NA</AddresseeName>
+      <AddresseeAddressLine1>510 HIGH ST</AddresseeAddressLine1>
+      <AddresseeCity>MOUNT HOLLY</AddresseeCity>
+      <AddresseeState>NJ</AddresseeState>
+      <AddresseeZip>08060</AddresseeZip>
+      <ArchiveInd>Y</ArchiveInd>
+      <PrintInd>DEPT</PrintInd>
+      <PrinterName>HCL_India2</PrinterName>
+    </AccountRecord>
+    <CAPolicyRecord>
+      <RecordKey>1</RecordKey>
+      <NJMPolicyNumber>1600243455</NJMPolicyNumber>
+      <QuoteNumber>QQ703412400</QuoteNumber>
+      <ProductCode>CA</ProductCode>
+      <IndustryCode>GM</IndustryCode>
+      <PolicyNumPrefixDisplay>CAGM</PolicyNumPrefixDisplay>
+      <NJMPolicyHolderName1>CA AUTO SMOKE</NJMPolicyHolderName1>
+      <BaseState>NJ</BaseState>
+      <UWCompanyName>New Jersey Manufacturers Insurance</UWCompanyName>
+      <PolEffectiveDate>2022-06-03T00:01:00-04:00</PolEffectiveDate>
+      <PolicyEffectiveYear>2022</PolicyEffectiveYear>
+      <PolExpirationDate>2023-06-03T00:01:00-04:00</PolExpirationDate>
+    </CAPolicyRecord>
+    <TableOfContents>
+      <Document>
+        <DocumentName>CL Blank Letter Template</DocumentName>
+      </Document>
+    </TableOfContents>
+    <LossPayeeSchedule />
+    <CopiesTo />
+  </RecordDelim>
+</CustomerData></int:XmlData>
+						</int:Source>
+					</int:DataDefinition>
+				</int:Document>
+				<int:Company>NJM</int:Company>
+				<int:State>S_CreateNewTicket</int:State>
+				<int:BusinessProcessRelativePath resolveDepartment="true">Ticket.json</int:BusinessProcessRelativePath>
+				<int:Holder>
+					<int:UserName>561364</int:UserName>
+				</int:Holder>
+			</int:Ticket>
+		</int:CreateTicket2Request>
+	</soapenv:Body>
+</soapenv:Envelope>
+

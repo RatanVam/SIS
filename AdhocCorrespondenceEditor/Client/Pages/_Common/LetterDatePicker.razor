@@ -1,0 +1,63 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          * Letter Date
+    </div>
+    <div class="panel-body">
+        <div class="row margin-top-controls">
+            <div class="col-md-3">
+                * Letter Date
+            </div>
+            <div class="col-md-6">
+                <RadzenDatePicker @bind-Value=@letterDate class="@LookupData.GetTextColorClassCalander((letterDate.HasValue)?letterDate.Value.ToString():string.Empty, firstRendeValue)" 
+                DateFormat="MMMM dd, yyyy" Change=@(args => OnletterDateChange(args))  Style="width: 100%; max-width: 400px;" ShowCalendarWeek/>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    DateTime? letterDate;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (letterDate.HasValue)
+            ((PLOutputBase)LookupData.UserSelection).LetterDate = letterDate.Value;
+        else
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+        }
+
+    }
+
+    void OnletterDateChange(object myArgs)
+    {
+        letterDate = myArgs == null? null:(DateTime)myArgs;
+    }
+}

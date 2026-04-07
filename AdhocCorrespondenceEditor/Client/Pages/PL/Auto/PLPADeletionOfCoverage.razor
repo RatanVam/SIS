@@ -1,0 +1,138 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity 
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Deletion of Coverage
+    </div>
+    <div class="panel-body">
+                    <div class="row" hidden="@(DeletionType==null || DeletionType?.Count() == 0)">
+                <div class="col-md-3">
+                   Deletion Type
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@DeletionType Change=@(args => OnDeletionTypeChanged(args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                   * Deletion of Coverage Reason
+                </div>
+                <div class="col-md-9">
+                <RadzenDropDown class="@LookupData.GetTextColorClass(reason, firstRendeValue)"  TValue="string"  Data=@reasonList Change=@(args => OnReasonChanged(args)) AllowClear=true Placeholder="--Select--">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    <div class="col-md-9"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    IEnumerable<DocumentDropdownLookupDataEntity>  reasonList;
+    IEnumerable<DocumentDropdownLookupDataEntity>  DeletionType;
+
+    List<string> partyList = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", reason);
+        try
+        {
+            reasonList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonList), LookupData.documentData.documentEntity.DocumentId)}/"));
+            var deletionVariable = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(DeletionType), LookupData.documentData.documentEntity.DocumentId);
+            if (!string.IsNullOrEmpty(deletionVariable))
+                DeletionType = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{deletionVariable}/"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(reason) )
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.OHCancellationNonRenewal tempDetails = new();
+        ((PLPAUserEntity)LookupData.UserSelection).ReasonDeletionOfCoverage = reason;
+        ((PLPAUserEntity)LookupData.UserSelection).DeletionType = deletionType;
+        ((PLPAUserEntity)LookupData.UserSelection).ReasonDeletionOfCoverageOtherInfo = reasonOtherInfo;
+        ((PLPAUserEntity)LookupData.UserSelection).DeletionTypeOtherInfo = deletionTypeOtherInfo;
+    }
+
+    string reason,reasonOtherInfo = string.Empty;
+    List<Type> selectedList= new ();
+    List<string> select1Controls = new List<string>();
+    List<string> select2Controls = new List<string>();
+    async void OnReasonChanged(object myArgs)
+    {
+        var reasonDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        reasonOtherInfo = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemAdditionalValue;
+        selectedList.Clear();
+        StateHasChanged();
+        select1Controls = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, reasonDetails);
+        CreateUniqueControlList(reasonDetails);
+    }
+
+    string deletionType,deletionTypeOtherInfo;
+    async void OnDeletionTypeChanged(object myArgs)
+    {
+        var deletionTypeDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        deletionType = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        deletionTypeOtherInfo = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemAdditionalValue;
+        selectedList.Clear();
+        StateHasChanged();
+        select2Controls = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, deletionTypeDetails);
+        CreateUniqueControlList(deletionTypeDetails);
+    }
+
+    void CreateUniqueControlList(string reasonDetails)
+    {
+        List<string> uniqueControls = new List<string>();
+        uniqueControls.AddRange(select2Controls);
+        uniqueControls.AddRange(select1Controls.Except(select2Controls));
+        uniqueControls.Sort();
+        foreach (var childControl in uniqueControls)
+        {
+            Parameters["Reason"] = reasonDetails;
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+
+}

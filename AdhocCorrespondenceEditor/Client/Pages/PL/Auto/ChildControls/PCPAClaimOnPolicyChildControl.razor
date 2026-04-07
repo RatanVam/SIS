@@ -1,0 +1,126 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+                <div class="row">
+                <div class="col-md-4">
+                    Number of Claims Reported:
+                </div>
+                <div class="col-md-6">
+                     <RadzenTextBox class="DropDownSize" @bind-Value=@noofClaimReported   MaxLength="75" />
+                </div>
+            </div>
+            <hr />
+        @foreach (var obj in claimDetails)
+        {
+                         <div class="row">
+                <div class="col-md-4">Claim Information
+                 </div></div>
+            <div class="row">
+                <div class="col-md-4">
+                    NJM Claim Number:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" Name="ReferenceNumber" @bind-Value=@obj.NJMClaimNo  MaxLength="75" />
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                   NJM Claim Date:
+                </div>
+                <div class="col-md-6">
+                    <RadzenDatePicker class="DropDownSize" @bind-Value=@obj.NJMClaimDate DateFormat="MM/dd/yyyy" Placeholder="mm/dd/yyyy"/>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-4">
+                    NJM Claim Description:
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize" Name="ReferenceNumber" @bind-Value=@obj.NJMClaimDiscription  MaxLength="150" />
+                </div>
+            </div>
+            <br/>
+           <div class="row">   <hr /></div>
+        }
+</div>
+            <div class="row col-md-12">
+                <RadzenButton class="AddRemoveButtons" Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 )/>
+                <RadzenButton class="AddRemoveButtons" Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+            </div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    string noofClaimReported = string.Empty;
+
+    List<ClaimOnPolicy> claimDetails = new List<ClaimOnPolicy>();
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userData = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userData.ClaimOnPolicyDetails == null) userData.ClaimOnPolicyDetails = new List<ClaimOnPolicyInfo>();
+        userData.noofClaimReported = noofClaimReported?.Trim();
+        foreach (var obj in claimDetails)
+        {
+            userData.ClaimOnPolicyDetails.Add(new ClaimOnPolicyInfo
+                {
+                    NJMClaimDate = obj.NJMClaimDate,
+                    NJMClaimNo = obj.NJMClaimNo?.Trim(),
+                    NJMClaimDiscription = obj.NJMClaimDiscription?.Trim()
+                });
+        }
+    }
+
+    int indexCount = 0;
+    int maxRecords = 6;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            claimDetails.Insert(indexCount,new ClaimOnPolicy());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            claimDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    public class ClaimOnPolicy
+    {
+        public string NJMClaimNo { get; set; }
+        public DateTime? NJMClaimDate { get; set; }
+        public string NJMClaimDiscription { get; set; } = string.Empty;
+    }
+
+}

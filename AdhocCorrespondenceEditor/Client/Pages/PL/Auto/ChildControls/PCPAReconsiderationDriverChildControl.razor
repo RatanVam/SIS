@@ -1,0 +1,80 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">
+        Driver Name:
+    </div>
+    <div class="col-md-4">
+        <RadzenDropDown  TValue="PartyAddressUI" Data=@partyList Change=@(args => OnDriverChanged(args)) ValueProperty="PartyID" TextProperty="DisplayName"
+            AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 300px;" />
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox   @bind-Value=@inputDriverName Disabled ="@(!string.IsNullOrEmpty(selectedDriver))" MaxLength="150" Style="width: 100%; max-width: 300px;"/>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    string selectedDriver, inputDriverName= string.Empty;
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+
+            string plDriver;
+            var driverInfoTypes = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(plDriver), LookupData.documentData.documentEntity.DocumentId).Split(',');
+
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(y => (driverInfoTypes.Any(y.PartyRoles.Contains)))?.OrderBy(x=>x.DisplayName)?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails == null)
+            ((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails = new List<PolDriveInfo>();
+        ((PLPAUserEntity)LookupData.UserSelection).PolicyDriverDetails.Add(new PolDriveInfo
+            {
+                DriverName = string.IsNullOrEmpty(selectedDriver) ? inputDriverName?.Trim() : selectedDriver
+            });
+    }
+    public async void OnDriverChanged(object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            selectedDriver = string.Empty;
+        else
+            selectedDriver = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(selectedDriver))
+            inputDriverName = string.Empty;
+    }
+
+
+}

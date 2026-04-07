@@ -1,0 +1,124 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        @lable
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   @subLable
+                </div>
+                <div class="col-md-9">
+                <RadzenDropDown class="@LookupData.GetTextColorClass(reason, firstRendeValue & (Reason_isRequired || OHReason_isRequired))"  TValue="string"  Data=@reasonList Change=@(args => OnReasonChanged(args)) AllowClear=true Placeholder="--Select--">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    <div class="col-md-9"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    IEnumerable<DocumentDropdownLookupDataEntity>  reasonList;
+    List<string> partyList = new();
+
+    bool HideControl = false;
+    string lable, subLable;
+    bool Reason_isRequired = true;
+    bool OHReason_isRequired = true;
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", reason);
+        try
+        {
+            if (string.IsNullOrEmpty(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(Reason_isRequired), LookupData.documentData.documentEntity.DocumentId)))
+            {
+                Reason_isRequired = false;
+            }
+            if (string.IsNullOrEmpty(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(OHReason_isRequired), LookupData.documentData.documentEntity.DocumentId)))
+            {
+                OHReason_isRequired = false;
+            }
+            reasonList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonList), LookupData.documentData.documentEntity.DocumentId)}/"));
+            HideControl = !string.IsNullOrEmpty(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(HideControl), LookupData.documentData.documentEntity.DocumentId));
+            lable = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(lable), LookupData.documentData.documentEntity.DocumentId);
+            subLable = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(subLable), LookupData.documentData.documentEntity.DocumentId);
+            if (Reason_isRequired || OHReason_isRequired)
+            {
+                subLable = $"* {subLable}";
+            }          
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(reason) && (Reason_isRequired || OHReason_isRequired))
+        {            
+            LookupData.errorDetails.IsInValid = true; 
+            return;
+        }
+            if (!((PLPAUserEntity)LookupData.UserSelection).IsNDEOffer.HasValue)
+            ((PLPAUserEntity)LookupData.UserSelection).IsNDEOffer = false;
+        ((PLPAUserEntity)LookupData.UserSelection).ReasonNonrenewalInspireTag = reasonInspireTag;
+        ((PLPAUserEntity)LookupData.UserSelection).Reason = reason;        
+    }
+
+    string reason,reasonInspireTag = string.Empty;
+    List<Type> selectedList= new ();
+    public async void OnReasonChanged(object myArgs)
+    {
+        var reasonDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        reasonInspireTag = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).InspireTag;
+        var showOtherControls = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, reasonDetails, LookupData.documentData.documentEntity.DocumentId);
+
+        if(LookupData.HideClaimViolation != null) 
+        LookupData.HideClaimViolation((showOtherControls.ToUpper().Contains("ShowClaimViolation".ToUpper())) ? false : true, -1);
+        if(LookupData.HideMVRReference != null)
+        LookupData.HideMVRReference((showOtherControls.ToUpper().Contains("ShowMVRReference".ToUpper())) ? false : true);
+
+        selectedList.Clear();
+        StateHasChanged();
+        var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, reasonDetails);
+        foreach (var childControl in childControlList)
+        {
+            Parameters["Reason"] = reasonDetails;
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+
+}

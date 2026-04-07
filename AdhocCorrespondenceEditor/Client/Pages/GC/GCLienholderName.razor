@@ -1,0 +1,73 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Lienholder
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   Lienholder's Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="Lienholder" class="DropDownSize" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string lienholderRoles;
+            lienholderRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(lienholderRoles), LookupData.documentData.documentEntity.DocumentId);
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(lienholderRoles))
+            {
+                var partyRoles = lienholderRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Any(partyRoles.Contains))?.OrderBy(x=>x.DisplayName)?.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    string partyID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        partyID = (myArgs == null) ? string.Empty : myArgs.ToString();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID))
+            return;
+        ((GCUserEntity)LookupData.UserSelection).LienholderName = partyList.Where(x => x.PartyID == partyID).FirstOrDefault()?.DisplayName;
+    }
+
+}

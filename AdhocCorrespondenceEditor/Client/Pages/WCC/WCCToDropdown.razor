@@ -1,0 +1,76 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        To Section
+    </div>
+
+    <div class="panel-body">
+
+            <div class="row">
+                <div class="col-md-3">
+                    To::
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+
+
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    string partyID { set; get; }
+    List<PartyAddressUI> partyList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            partyList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    public async void OnPartyChanged(object myArgs)
+    {
+        partyID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        ((WCCUserEntity)LookupData.UserSelection).ToWCC = partyList.Where(x => x.PartyID == partyID).FirstOrDefault()?.DisplayName;
+    }
+
+}

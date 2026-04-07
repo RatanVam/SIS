@@ -1,0 +1,66 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Reason(s) for Denial
+    </div> 
+    <div class="panel-body">
+        
+        @foreach(var reason in reasonsDenialWCC)
+        {<div class="row" style="margin-left:5px">
+                <RadzenSwitch Change="@(args => OnDenialReasonChanged(args, @reason.DocumentDropdownLookupItemValue))" Style="margin-right:3px"/>  @reason.DocumentDropdownLookupItemCode  
+          </div>
+       }
+            <hr />
+
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsDenialWCC = new ();
+    List<string> reasons = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsDenialWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsDenialWCC), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            ((WCCUserEntity)LookupData.UserSelection).ReasonsForDenial = new List<string>();
+            ((WCCUserEntity)LookupData.UserSelection).ReasonsForDenial.AddRange(reasons);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

@@ -1,0 +1,57 @@
+{
+  "AppSettings": {
+    "OnBaseURL": "{{OnBaseURL}}",
+    "GC_OnBaseURL": "{{GC_OnBaseURL}}",
+    "InspireTicketIdURL": "{{InspireTicketIdURL}}",
+    "InspireSearchURL": "{{InspireSearchURL}}",
+    "InspireSoapAction": "CreateTicket2Request",
+    "TimeOutErrorInMin": "{{TimeOutError}}",
+    "MaxReceivedMessageSize": "{{MaxReceivedMessageSize}}",
+    "ShowXMLs": "{{ShowXMLs}}",
+    "ShowSimulator": "{{ShowSimulator}}",
+    "LogDocumentsInDB": "{{LogDocumentsInDB}}",
+    "LogESBData": "{{LogESBData}}",
+    "SM_ACEGroups": "{{AceADGroupName}}",
+    "SM_Proxy": "{{SMProxy}}",
+    "EzsendApiEndpoint": "{{EzsendApiEndpoint}}",
+    "ValidatePhoneEndpoint": "{{ValidatePhoneEndpoint}}",
+    "InspireClientId": "{{InspireClientId}}",
+    "InspireClientSecret": "{{InspireClientSecret}}"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "LogSettings": {
+    "source": "{{ACEAppName}}",
+    "environment": "{{environment}}",
+    "from": "{{mail-listFrom}}",
+    "to": "{{mail-listTo}}"
+  },
+  "SiteMinderSettings": {
+    "rolesHeader": "ACEGroups",
+    "userHeader": "SM_USERDN",
+    "headers": [ "firstName:Vijay", "last name:bhimuni" ],
+    "roles": "CN=Inspire_Developers,OU=Groups,DC=njmgroup,DC=com^CN=Inspire_ACE_NonProd,OU=Groups,DC=njmgroup,DC=com",
+    "spoof": false,
+    "user": "njmgroup\\561364"
+  },
+  //"IdentityConfig": {
+  //  "IssuerUrl": "{{IssuerUrl}}",
+  //  "ClientId": "{{ClientId}}",
+  //  "ClientSecret": "{{ClientSecret}}",
+  //  "DataProtection": {
+  //    "KeyPath": "{{KeyPath}}"
+  //  },
+  //  "allowAnonymousPost": true
+  //},
+  "SqlSettings": [
+    {
+      "name": "ACESqlDB",
+      "connection": "server={{ACE_Server}};database={{ACE_DataBase}};integrated security=True"
+    }
+  ],
+  "AllowedHosts": "*"
+}

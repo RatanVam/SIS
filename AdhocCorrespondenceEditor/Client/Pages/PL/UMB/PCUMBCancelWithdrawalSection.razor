@@ -1,0 +1,79 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Cancellation Withdrawal Reason
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   Withdrawal Reason
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@reasonList Change=@(args => OnWithdrawalChanged(args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    <div class="col-md-9"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    IEnumerable<DocumentDropdownLookupDataEntity> reasonList;
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        try
+        {
+            reasonList =(await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonList),LookupData.documentData.documentEntity.DocumentId)}/")); 
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).WithdrawalCancelReason = reason;
+    }
+    List<Type> selectedList= new ();
+    string reason = string.Empty;
+    public async void OnWithdrawalChanged(object myArgs)
+    {
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        selectedList.Clear();
+        var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, reason);
+        foreach (var childControl in childControlList)
+        {
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+
+   
+}

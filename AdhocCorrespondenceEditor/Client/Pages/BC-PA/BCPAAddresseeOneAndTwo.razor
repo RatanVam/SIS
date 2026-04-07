@@ -1,0 +1,182 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Addressee Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Addressee 1 Name:
+                </div>
+                <div class="col-md-6">
+                     <RadzenDropDown class="@LookupData.GetTextColorClass(displayName, firstRendeValue)" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+            <div class="row margin-top-controls">
+                <div class="col-md-3">
+                   * Addressee 1 Address:
+                </div>
+                <div class="col-md-6">
+                   <RadzenDropDown @ref="childComponent"class="@LookupData.GetTextColorClass(selectedAddressID, firstRendeValue)" TValue="ControlClass.Address" Data=@partyAddresses TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;">
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+        </Template>
+    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(partyAddresses.Count > 0 || string.IsNullOrEmpty(displayName))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+                        <div class="row margin-top-controls">
+                <div class="col-md-3">
+                   Addressee 2 Name:
+                </div>
+                <div class="col-md-6">
+                   <RadzenSwitch @bind-Value=@AddresseeTwoNameSelected Visible ="@(secondAddresseeName.Length > 0)"/>@secondAddresseeName
+                    <span class="alert-dangerMsg" hidden="@(secondAddresseeName.Length != 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public bool AddresseeTwoNameSelected = false;
+
+    RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+    List<PartyAddressUI> partyList = new();
+    List<ControlClass.Address> partyAddresses  = new List<ControlClass.Address>();
+    string selectedAddressID = string.Empty;
+    string secondAddresseeName = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            partyList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity, true);
+            var paryinfo = partyList.Where(x => x.PartyRoles.Contains("SecondaryContact_Ext")).FirstOrDefault();
+            if (paryinfo != null)
+            {
+                if (!string.IsNullOrEmpty(paryinfo.Prefix))
+                    secondAddresseeName = paryinfo.Prefix;
+                if (!string.IsNullOrEmpty(paryinfo.FirstName))
+                    secondAddresseeName = secondAddresseeName + " " + paryinfo.FirstName;
+                if (!string.IsNullOrEmpty(paryinfo.MiddleName))
+                    secondAddresseeName = secondAddresseeName + " " + paryinfo.MiddleName;
+                if (!string.IsNullOrEmpty(paryinfo.LastName))
+                    secondAddresseeName = secondAddresseeName + " " + paryinfo.LastName;
+                if (!string.IsNullOrEmpty(paryinfo.Suffix))
+                    secondAddresseeName = secondAddresseeName + " " + paryinfo.Suffix;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (isValidate && string.IsNullOrEmpty(selectedAddressID) || string.IsNullOrEmpty(displayName))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((BCUserEntity)LookupData.UserSelection);
+        if (!string.IsNullOrEmpty(secondAddresseeName))
+            userSelection.AddresseeAddress2 = AddresseeTwoNameSelected ? secondAddresseeName : string.Empty;
+
+        try
+        {
+
+            if (selectedParty != null)
+            {
+                if (selectedParty.SubType.ToUpper() != ApplicationConstants.Company.ToUpper())
+                {
+                    displayName = string.Empty;
+                    if (!string.IsNullOrEmpty(selectedParty.Prefix) && selectedParty.Prefix.ToUpper() != ApplicationConstants.EstateOf)
+                        displayName = selectedParty.Prefix;
+                    displayName = displayName + ((!string.IsNullOrEmpty(selectedParty.FirstName)) ? (" " + selectedParty.FirstName) : string.Empty);
+                    displayName = displayName + ((!string.IsNullOrEmpty(selectedParty.MiddleName)) ? (" " + selectedParty.MiddleName) : string.Empty);
+                    displayName = displayName + ((!string.IsNullOrEmpty(selectedParty.LastName)) ? (" " + selectedParty.LastName) : string.Empty);
+                }
+                userSelection.AddresseeAddress.DisplayName = displayName?.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            selectedAddressID = null;
+        }
+        if (!string.IsNullOrEmpty(selectedAddressID))
+        {
+            var selectedAddress = partyAddresses.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+            userSelection.AddresseeAddress.Line1Tx = selectedAddress.Line1Tx;
+            userSelection.AddresseeAddress.Line2Tx = selectedAddress.Line2Tx;
+            userSelection.AddresseeAddress.Line3Tx = selectedAddress.Line3Tx;
+            userSelection.AddresseeAddress.MunicipalityNm = selectedAddress.Municipality;
+            userSelection.AddresseeAddress.CountrySubdivisionNm = selectedAddress.CountrySubdivision;
+            userSelection.AddresseeAddress.PostalCd = selectedAddress.PostalCd;
+        }
+        else
+        {
+            userSelection.AddresseeAddress = new();
+        }
+    }
+
+    string displayName = string.Empty;
+    PartyAddressUI selectedParty;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                displayName = string.Empty;
+                selectedParty = null;
+                partyAddresses = new List<ControlClass.Address>();
+            }
+            else
+            {
+                selectedParty = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault();
+                displayName = selectedParty.DisplayName;
+                partyAddresses = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault().PartyAddresses;
+            }
+            foreach (var cntl in components)
+                cntl.Reset();
+            selectedAddressID = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+
+}

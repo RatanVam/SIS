@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "AdhocCorrespondenceEditor.Domain/1.0.0": {
+        "runtime": {
+          "AdhocCorrespondenceEditor.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AdhocCorrespondenceEditor.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

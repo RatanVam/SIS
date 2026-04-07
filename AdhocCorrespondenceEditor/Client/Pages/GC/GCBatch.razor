@@ -1,0 +1,56 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Print Services
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="PrintServices" @bind-Value=@isPrintServicesBatch  Change="@(args => OnPrintServicesChanged(args))"/>Print Services Batch
+            </div>
+@*            <div class="col-md-8">
+                <span class="alert-dangerMsg">The Print Services Batch option should NOT be selected if the letter's attachments require manual processing.</span>
+            </div>
+*@
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool isPrintServicesBatch;
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((GCUserEntity)LookupData.UserSelection).IsPrintServicesBatch = isPrintServicesBatch;
+    }
+    void OnPrintServicesChanged(bool value)
+    {
+        if (LookupData.HideCCBCControl != null)
+            LookupData.HideCCBCControl(value);
+    }
+}

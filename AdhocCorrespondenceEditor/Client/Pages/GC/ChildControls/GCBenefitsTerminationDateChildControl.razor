@@ -1,0 +1,47 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="col-md-12">
+       <RadzenDatePicker id="BENEFITS_TERM_DT" class="DropDownSize300" @bind-Value=@BENEFITS_TERM_DT Disabled=@isDisable DateFormat="MM/dd/yy" Placeholder="MM/DD/YY"/>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    public DateTime? BENEFITS_TERM_DT;
+    bool isDisable = true;
+    protected override async Task OnInitializedAsync()
+    {
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        LookupData.GCParagraph += new Action<string,bool>(HideCCBCControl);
+    }
+
+    void HideCCBCControl(string tagname, bool isEnable)
+    {
+        if(nameof(BENEFITS_TERM_DT) == tagname)
+            isDisable = !isEnable;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (!isDisable)
+            ((GCUserEntity)LookupData.UserSelection).BenefitsTerminationDate = BENEFITS_TERM_DT;
+    }
+
+}

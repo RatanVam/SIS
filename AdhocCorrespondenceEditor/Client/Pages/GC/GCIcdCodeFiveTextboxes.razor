@@ -1,0 +1,75 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        ICD9 Codes
+    </div>
+    <div class="panel-body">
+        @foreach(var obj in displayNames)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                  @($"ICD9 Code {obj.Index}:")
+                </div>
+                <div class="col-md-9">
+                    <RadzenTextBox id=@("ICD"+obj.Index) @bind-Value=@obj.DisplayName class="DropDownSize"/> 
+
+                </div>
+            </div>
+            }
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+
+    List<ClimentDetails> displayNames = new List<ClimentDetails>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+
+            for (int i = 1; i <= 5; i++)
+                displayNames.Add(new ClimentDetails { Index = i });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((GCUserEntity)LookupData.UserSelection).ICDCodes = new List<string>(displayNames.Where(y=> !string.IsNullOrEmpty(y.DisplayName?.Trim())).Select(x => x.DisplayName));
+    }
+
+    class ClimentDetails
+    {
+        public int Index { set; get; }
+        public string DisplayName { set; get; } = string.Empty;
+    }
+}

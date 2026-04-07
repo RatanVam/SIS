@@ -1,0 +1,100 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Risk Location
+    </div>
+        <div class="panel-body">
+             <div class="row">
+                <div class="col-md-4">
+                    Risk Location Address
+                </div>
+                    <div class="col-md-4">
+                        <RadzenDropDown class="@LookupData.GetTextColorClass(selectedAddressID+addressValue,firstRendeValue)"   TValue="ControlClass.Address" Data=@partyList TextProperty="Line1Tx" ValueProperty="ID" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                        @($"{context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                        </Template>
+                    </RadzenDropDown>
+                </div>
+                    <div class="col-md-4">
+                    <RadzenTextBox class="@LookupData.GetTextColorClass(selectedAddressID+addressValue, (!string.IsNullOrEmpty(selectedAddressID) || firstRendeValue))"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedAddressID))" MaxLength="150"  Style="width: 100%; max-width: 400px;"/>
+                </div>
+            </div>
+        </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedAddressID = string.Empty;
+    string addressValue = string.Empty;
+    List<ControlClass.Address> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var partyRoles = ApplicationConstants.PLCompleteAddressTypes.Split(',').ToList();
+            var  locations = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.LocationExposures).Where(y => (partyRoles.Contains(y.LocationTypeCd)))).ToList();
+            partyList = PCUMBNamesAddress.GetAddress(locations);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedAddressID) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address tempAddress = new();
+
+        if (string.IsNullOrEmpty(selectedAddressID))
+        {
+            tempAddress.Line1Tx = addressValue?.Trim();
+        }
+        else
+        {
+            var selectedAddress = partyList.Where(x => x.ID == selectedAddressID).FirstOrDefault();
+
+            tempAddress.Line1Tx = selectedAddress?.Line1Tx;
+            tempAddress.Line2Tx = selectedAddress?.Line2Tx;
+            tempAddress.Line3Tx = selectedAddress?.Line3Tx;
+            tempAddress.MunicipalityNm = selectedAddress?.Municipality;
+            tempAddress.CountrySubdivisionNm = selectedAddress?.CountrySubdivision;
+            tempAddress.PostalCd = selectedAddress?.PostalCd;
+        }
+        userSelection.RiskLocation = tempAddress;
+
+    }
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedAddressID = myArgs == null ? string.Empty : myArgs.ToString();
+        if(!string.IsNullOrEmpty(selectedAddressID))
+            addressValue = string.Empty;
+    }
+        bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+}

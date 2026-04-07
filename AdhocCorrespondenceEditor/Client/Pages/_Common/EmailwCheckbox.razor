@@ -1,0 +1,177 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using System.Text.RegularExpressions
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Email Information
+    </div>
+        <div class="panel-body">
+            <div class="row">
+                    <div class="col-md-9">
+                        @if (!string.IsNullOrEmpty(accountPreferredEmail))
+                        {
+                            <div style="margin-top: 5px">
+                                <RadzenSwitch Change="@(args => EmailSelected(args, accountPreferredEmail))" />
+                                @accountPreferredEmail 
+                                <br />
+                            </div>
+                        }
+                
+                     @foreach (var party in partyList)
+                     {                       
+                        if (@party.ElectronicsDetails?.EmailAddress.Count > 0)
+                        {
+                        
+                            @foreach (var emailAddress in party.ElectronicsDetails?.EmailAddress)
+                            {
+                                <div style="margin-top: 5px">
+                                    <RadzenSwitch  Change="@(args => EmailSelected(args,emailAddress))"/>   @($"{@emailAddress} ({@party.FirstName} {@party.LastName})")                                                                              
+                                </div>
+                            }
+                        }                   
+                    }
+
+                    </div>
+                      
+            </div>
+                     @foreach(var emailValue in emailDetails)
+                    {
+                        <div class="row" style="margin-top: 5px"><div class="col-md-3">Email Address :</div>
+                    <div class="col-md-6">
+                            <RadzenTextBox  Name="Email1" class="@LookupData.GetTextColorClass(((Utility.ValidateEmailUsingRegex(emailValue.email)))?"string":string.Empty,string.IsNullOrEmpty(emailValue.email))" @bind-Value=@emailValue.email
+                            Style="width: 100%; max-width: 400px;" />
+                    </div></div>
+                    }
+
+                        <div class="row col-md-12" style="margin-top: 15px">
+                <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount>maxRecords-1 ) />
+                <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount==0)/>
+            </div>
+        </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PartyAddressUI> partyList = new();
+    List<EmailDetail> emailDetails = new List<EmailDetail>();
+
+
+
+    List<string> selectedEmails = new List<string>();    
+    public string accountPreferredEmail;
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {            
+            if (LookupData.SourceSystemEntity is PLSourceSystemEntity)
+            {
+                accountPreferredEmail = ((PLSourceSystemEntity)LookupData.SourceSystemEntity)?.PolicyData?.Policy?.AccountPreferredEmail;                
+            }
+            else if (LookupData.SourceSystemEntity is PLAutoSourceSystemEntity)
+            {
+                accountPreferredEmail = ((PLAutoSourceSystemEntity)LookupData.SourceSystemEntity)?.PolicyData.Policy?.Account?.PreferredEmail?.UnparsedEmailAddress;
+            }
+
+            partyList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((OutputBase)LookupData.UserSelection);
+        userSelection.EmailAddress = string.Empty;
+
+        if (selectedEmails.Count == 0 && emailDetails.Count ==0)
+            return;
+        try
+        {
+            List<string> emails = new List<string>();
+            emails.AddRange(selectedEmails);
+            foreach (var email in emailDetails)
+            {
+                if (!Utility.ValidateEmailUsingRegex(email.email?.Trim()))
+                {
+                    LookupData.errorDetails.IsInValid = true;
+                    return;
+                }
+                if (!string.IsNullOrEmpty(email.email?.Trim()))
+                    emails.Add(email.email?.Trim());
+            }
+            emails.Add(string.Empty);
+            userSelection.EmailAddress = string.Join(";", emails);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    void EmailSelected(bool isSelected, string email)
+    {
+        if (isSelected)
+            selectedEmails.Add(email?.Trim());
+        else
+            selectedEmails.Remove(email?.Trim());
+    }
+
+
+    int indexCount = 0;
+    int maxRecords = 3;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            emailDetails.Insert(indexCount,new EmailDetail());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            emailDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    class EmailDetail
+    {
+        public string email = string.Empty;
+    }
+}

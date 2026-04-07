@@ -1,0 +1,80 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        License Suspended Information
+    </div>
+    <div class="panel-body">
+         @foreach(var displayName in partyList)
+         {
+            <div class="row" style="margin-top: 2px;margin-left: 5px">
+                <RadzenSwitch Change="@(args => OnDriverChanged(args, displayName))"/> @displayName  
+            </div>
+         }
+    <div class="row col-md-6">
+        <RadzenTextBox class="DropDownSize"  @bind-Value=@inputDriverName MaxLength="75" />
+    </div>
+        </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+
+    List<string> selectedDriver= new();
+    string inputDriverName = string.Empty;
+    List<string> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string plDriver;
+            var driverInfoTypes = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(plDriver), LookupData.documentData.documentEntity.DocumentId).Split(',');
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            var driverInfo = partyFullList.Where(y => (driverInfoTypes.Any(y.PartyRoles.Contains))).ToList();
+            partyList = PCUMBNamesAddress.GetPersonName(driverInfo);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (((PLPAUserEntity)LookupData.UserSelection).SuspendedLicDriverName == null)
+            ((PLPAUserEntity)LookupData.UserSelection).SuspendedLicDriverName = new List<string>();
+        if (selectedDriver.Count > 0)
+            ((PLPAUserEntity)LookupData.UserSelection).SuspendedLicDriverName.AddRange(selectedDriver);
+         if(!string.IsNullOrEmpty(inputDriverName?.Trim()))
+            ((PLPAUserEntity)LookupData.UserSelection).SuspendedLicDriverName.Add(inputDriverName?.Trim());
+    }
+    public async void OnDriverChanged(bool value, string displayName)
+    {
+        if (value)
+            selectedDriver.Add(displayName);
+        else
+            selectedDriver.Remove(displayName);
+
+    }
+
+}

@@ -1,0 +1,942 @@
+[
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ACE.DocumentLogController",
+    "Method": "PostDocumentLog",
+    "RelativePath": "api/DocumentLog",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "details",
+        "Type": "AdhocCorrespondenceEditor.Shared.DocumentLogEntity",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Int32",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ExternalServiceController",
+    "Method": "GetESBData",
+    "RelativePath": "api/ExternalService/esb",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "details",
+        "Type": "AdhocCorrespondenceEditor.Shared.SourceSystemInputRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AdhocCorrespondenceEditor.Shared.SourceSystemBaseEntity",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ExternalServiceController",
+    "Method": "PostInspireData",
+    "RelativePath": "api/ExternalService/inspire",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "requestDetails",
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.InspireInputRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.String",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ExternalServiceController",
+    "Method": "GetOnbaseId",
+    "RelativePath": "api/ExternalService/onbase/{documentName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "documentName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Int32",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ExternalServiceController",
+    "Method": "GetOnbaseIdForGC",
+    "RelativePath": "api/ExternalService/onbase/gc/{docType}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "docType",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Int32",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "EzSendSubmit",
+    "RelativePath": "api/EZSend/ezsendsubmit",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "ezSendApiSubmit",
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.ExternalEzsendApiSubmit",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "GetEZSendRequest",
+    "RelativePath": "api/EZSend/getrequest",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Id",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.Common.EZSendRequestData, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "InitiateEasySendRequest",
+    "RelativePath": "api/EZSend/start",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "initiateRequest",
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.EasySendInitiateRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.EasySendResponse",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "UpdateStatusEZSendRequest",
+    "RelativePath": "api/EZSend/updatestatus",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Status",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.String",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "UpdateUserEZSendRequest",
+    "RelativePath": "api/EZSend/updateuser",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "UserId",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.String",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.EZSendController",
+    "Method": "ValidatePhone",
+    "RelativePath": "api/EZSend/validatephone",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "validatePhone",
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.ValidatePhone",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LogController",
+    "Method": "Post",
+    "RelativePath": "api/Log",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "value",
+        "Type": "AdhocCorrespondenceEditor.Shared.Log",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Boolean",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "ClearCache",
+    "RelativePath": "api/Lookup/clearcache",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetConfigurationData",
+    "RelativePath": "api/Lookup/configuration",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.ConfigurationEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetConfigurationDatabyLob",
+    "RelativePath": "api/Lookup/configuration/{lobName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDenialReasons",
+    "RelativePath": "api/Lookup/DenialReasons",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "AdhocCorrespondenceEditor.Shared.Common.DenialReasonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownChildcontrol",
+    "RelativePath": "api/Lookup/documentdropdownchildcontrol",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.DocumentDropdownChildControlEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownChildcontrol",
+    "RelativePath": "api/Lookup/documentdropdownchildcontrol/{documentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "documentId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownLookupData",
+    "RelativePath": "api/Lookup/documentdropdownlookupdata",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.DocumentDropdownLookupDataEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownLookupData",
+    "RelativePath": "api/Lookup/documentdropdownlookupdata/{keyName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "keyName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownLookupData",
+    "RelativePath": "api/Lookup/documentdropdownlookupdata/{lobName}/{documentId}/{keyName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "documentId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "keyName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetDocumentDropdownLookupData",
+    "RelativePath": "api/Lookup/documentdropdownlookupdata/{lobName}/{keyName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "keyName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetGenericLookup",
+    "RelativePath": "api/Lookup/genericlookup",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.GenericLookupEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetAppSettings",
+    "RelativePath": "api/Lookup/GetAppSettings",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetWebServiceSearch",
+    "RelativePath": "api/Lookup/GetWebServiceSearch",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetPolicyLookup",
+    "RelativePath": "api/Lookup/policylookup",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.PolicyLookupEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetPrinter",
+    "RelativePath": "api/Lookup/printer",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.PrinterLookupEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetPrinter",
+    "RelativePath": "api/Lookup/printer/{lobname}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetRules",
+    "RelativePath": "api/Lookup/rule",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.RuleEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetRuleLookup",
+    "RelativePath": "api/Lookup/ruleLookup",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.RuleLookupEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetWebService",
+    "RelativePath": "api/Lookup/webservice",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.WebServiceEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.LookupController",
+    "Method": "GetWebService",
+    "RelativePath": "api/Lookup/webservice/{lobName}/{urlType}/{environment}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "urlType",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "environment",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterController",
+    "Method": "GetPrinter",
+    "RelativePath": "api/Printer",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.PrinterEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterController",
+    "Method": "AddPrinter",
+    "RelativePath": "api/Printer/add",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "printerEntity",
+        "Type": "AdhocCorrespondenceEditor.Shared.PrinterRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterController",
+    "Method": "UpdatePrinter",
+    "RelativePath": "api/Printer/update",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "printerLookupEntity",
+        "Type": "AdhocCorrespondenceEditor.Shared.PrinterRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterLookupController",
+    "Method": "DeletePrinter",
+    "RelativePath": "api/PrinterLookup",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "LOBPrinterId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "userId",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterLookupController",
+    "Method": "AddPrinter",
+    "RelativePath": "api/PrinterLookup/add",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "printerLookupEntity",
+        "Type": "AdhocCorrespondenceEditor.Shared.PrinterLookupRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.PrinterLookupController",
+    "Method": "UpdatePrinter",
+    "RelativePath": "api/PrinterLookup/update",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "printerLookupEntity",
+        "Type": "AdhocCorrespondenceEditor.Shared.PrinterLookupRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetCategory",
+    "RelativePath": "api/ReferenceData/category",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.CategoryEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetCategoryFromBody",
+    "RelativePath": "api/ReferenceData/category/{lobName}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "roleNames",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetCategory",
+    "RelativePath": "api/ReferenceData/category/{lobName}/{roleNames}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lobName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "roleNames",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetDocument",
+    "RelativePath": "api/ReferenceData/document",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.DocumentEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetDocument",
+    "RelativePath": "api/ReferenceData/document/{categoryId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "categoryId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetDocumentControl",
+    "RelativePath": "api/ReferenceData/documentcontrol",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.DocumentControlEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetDocumentControl",
+    "RelativePath": "api/ReferenceData/documentcontrol/{documentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "documentId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetLOB",
+    "RelativePath": "api/ReferenceData/lob",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[AdhocCorrespondenceEditor.Shared.LOBEntity, AdhocCorrespondenceEditor.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "AdhocCorrespondenceEditor.Server.Controllers.ReferenceDataController",
+    "Method": "GetLOB",
+    "RelativePath": "api/ReferenceData/lob",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "roleNames",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

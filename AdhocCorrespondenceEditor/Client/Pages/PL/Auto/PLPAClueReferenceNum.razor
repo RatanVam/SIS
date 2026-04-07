@@ -1,0 +1,104 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          CLUE Reference Number
+    </div>
+        <div class="panel-body">
+
+            @foreach(var obj in cLUEDetails)
+            {
+                <div class="row" style="margin-top: 5px"><div class="col-md-3">CLUE Reference Number :</div>
+                    <div class="col-md-6">
+                    <RadzenTextBox class="DropDownSize"  Name="ReferenceNumber" @bind-Value=@obj.ReferenceNumber  MaxLength="75"/>
+                    </div></div>
+            }
+
+             <div class="row col-md-12" hidden=@singleRecord>
+                <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount>maxRecords-1 ) />
+                <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount==0)/>
+            </div>
+        </div>
+ </div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<CLUEReferenceNumber> cLUEDetails = new List<CLUEReferenceNumber>();
+    bool singleRecord = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        singleRecord = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(singleRecord), LookupData.documentData.documentEntity.DocumentId)?.ToString()?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+        if(singleRecord)
+        AddNewCCSection();
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userSelection.ClueReferenceNumber == null)
+            userSelection.ClueReferenceNumber = new List<string>();
+
+        if (cLUEDetails.Count == 0)
+            return;
+        try
+        {
+            userSelection.ClueReferenceNumber.AddRange(cLUEDetails.Select(x=>x.ReferenceNumber?.Trim()));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+
+    int indexCount = 0;
+    int maxRecords = 3;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            cLUEDetails.Insert(indexCount,new CLUEReferenceNumber());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            cLUEDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    class CLUEReferenceNumber
+    {
+        public string ReferenceNumber { get; set; } = string.Empty;
+    }
+}

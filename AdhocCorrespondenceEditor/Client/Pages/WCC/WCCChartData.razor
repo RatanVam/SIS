@@ -1,0 +1,283 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using System.Reflection
+@using System.Text.RegularExpressions
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Chart Data
+    </div>
+         <div class="panel-body">
+
+     @foreach (var obj in lstCharDetails)
+      {
+        <div class="row">
+            <div class="col-md-3">
+                * Chart Title:
+            </div>
+            <div class="col-md-4">
+                    <RadzenTextBox class="@LookupData.GetTextColorClass(obj.Chartlable,firstRendeValue)"  @bind-Value=@obj.Chartlable MaxLength="15" 
+             Style="width: 100%; max-width: 300px;"/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+              * Label 1:
+            </div>
+            <div class="col-md-4">
+                     <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable1 Placeholder="--Select--" AllowClear=true  
+                       class="@LookupData.GetTextColorClass(obj.Lable1,firstRendeValue)" Style="width: 100%; max-width: 300px;"/>
+                <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                    $&ensp; <RadzenTextBox class="@LookupData.GetTextColorClass(obj.Value1,firstRendeValue)" @bind-Value=@obj.Value1 onchange="@ChangeLable(obj, nameof(obj.Value1), obj.Value1)"
+                   MaxLength="15" Style="width: 100%; max-width: 200px;" Placeholder="####.##" 
+            onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57)|| event.charCode ==46 ))"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+              Label 2:
+            </div>
+            <div class="col-md-4">
+                     <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable2  Placeholder="--Select--" AllowClear=true  class = "DropDownSize300"/>
+                <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                    $&ensp;<RadzenTextBox @bind-Value=@obj.Value2 MaxLength="15" onchange="@ChangeLable(obj, nameof(obj.Value2), obj.Value2)" class = "DropDownSize200" Placeholder="####.##" onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46  ))"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+              Label 3:
+            </div>
+            <div class="col-md-4">
+                     <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable3 Placeholder="--Select--" AllowClear=true class = "DropDownSize300"/>
+                <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                    $&ensp;<RadzenTextBox @bind-Value=@obj.Value3 MaxLength="15" onchange="@ChangeLable(obj, nameof(obj.Value3), obj.Value3)" class = "DropDownSize200" Placeholder="####.##" onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46 ))"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+              Label 4:
+            </div>
+            <div class="col-md-4">
+                     <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable4 Placeholder="--Select--" AllowClear=true  class = "DropDownSize300"/>
+                <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                    $&ensp;<RadzenTextBox @bind-Value=@obj.Value4 MaxLength="15" onchange="@ChangeLable(obj, nameof(obj.Value4), obj.Value4)" class = "DropDownSize200" Placeholder="####.##" onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46 ))"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+              Label 5:
+            </div>
+            <div class="col-md-4">
+                      @if(chartDetails.Count > 4)
+                { <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable5 Placeholder="--Select--" AllowClear=true Style="width: 100%; max-width: 300px;"/>
+                     } else{<RadzenTextBox  @bind-Value=@obj.Lable5 MaxLength="150" class = "DropDownSize300" />}
+                <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                    $&ensp;<RadzenTextBox @bind-Value=@obj.Value5 MaxLength="15" onchange="@ChangeLable(obj, nameof(obj.Value5), obj.Value5)" class = "DropDownSize200" Placeholder="####.##" onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46 ) )"/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+              Label 6:
+            </div>
+            <div class="col-md-4">
+                @if(chartDetails.Count > 5)
+                { <RadzenDropDown TValue="string" Data=@chartDetails @bind-Value=@obj.Lable6 Placeholder="--Select--" AllowClear=true  class = "DropDownSize300" />
+                } else{ <RadzenTextBox  @bind-Value=@obj.Lable6 MaxLength="150" class = "DropDownSize300" />}
+               <span class="alert-dangerMsg" hidden="@(chartDetails.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+            <div class="col-md-4">
+                   $&ensp; <RadzenTextBox  @bind-Value=@obj.Value6 MaxLength="15" onchange="@ChangeLable(obj, nameof(obj.Value6), obj.Value6)" class = "DropDownSize200" Placeholder="####.##" onkeypress="return (event.charCode !=8 && event.charCode ==0 || ((event.charCode >= 48 && event.charCode <= 57) || event.charCode ==46 ) )"/>
+            </div>
+        </div>
+                <div class="row">
+            <div class="col-md-3">
+                <RadzenButton Click=@(args => DeleteSection(obj)) Text="Delete" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            </div>
+        </div>
+    <hr/>
+    }
+            <div class="row col-md-12">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+    </div>
+        </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PartyAddressUI> partyList = new();
+    List<string> chartDetails = new();
+    List<CharDetails> lstCharDetails = new List<CharDetails>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+
+            chartDetails = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(chartDetails), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList(); ;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        if (lstCharDetails.Count > 0)
+            userSelection.CharDetailsList = new();
+        else return;
+        foreach (var obj in lstCharDetails)
+        {
+            if (string.IsNullOrEmpty(obj.Chartlable) || string.IsNullOrEmpty(obj.Lable1) || string.IsNullOrEmpty(obj.Value1))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+
+            var tempObj = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.CharDetails();
+            tempObj.Chartlable = obj.Chartlable;
+            tempObj.Lable.Add(obj.Lable1);
+            tempObj.Lable.Add(obj.Lable2);
+            tempObj.Lable.Add(obj.Lable3);
+            tempObj.Lable.Add(obj.Lable4);
+            tempObj.Lable.Add(obj.Lable5);
+            tempObj.Lable.Add(obj.Lable6);
+            tempObj.Value.Add(obj.Value1);
+            tempObj.Value.Add(obj.Value2);
+            tempObj.Value.Add(obj.Value3);
+            tempObj.Value.Add(obj.Value4);
+            tempObj.Value.Add(obj.Value5);
+            tempObj.Value.Add(obj.Value6);
+            userSelection.CharDetailsList.Add(tempObj);
+        }
+    }
+    Regex not_num_period = new Regex("[^0-9.]");
+    bool ChangeLable(CharDetails obj, string lable, string value)
+    {
+        PropertyInfo prop = obj.GetType().GetProperty(lable);
+        if (null != prop && prop.CanWrite && !string.IsNullOrEmpty(value))
+        {
+            var val = not_num_period.Replace(value, "");
+            if (value != val)
+            {
+                prop.SetValue(obj, val);
+                StateHasChanged();
+            }
+        }
+
+        return false;
+    }
+    async void DeleteSection(CharDetails obj)
+    {
+        lstCharDetails.Remove(obj);
+        indexCount = lstCharDetails.Count();
+        StateHasChanged();
+    }
+
+    int indexCount = 0;
+    int maxRecords = 16;
+    async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            lstCharDetails.Insert(indexCount,new CharDetails(chartDetails));
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+     async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            lstCharDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    public class CharDetails
+    {
+        public CharDetails(List<string> chartDetails)
+        {
+            for (int i = 0; i < chartDetails.Count; i++)
+                switch (i)
+                {
+                    case 0:
+                        Lable1 = chartDetails[i];
+                        break;
+                    case 1:
+                        Lable2 = chartDetails[i];
+                        break;
+                    case 2:
+                        Lable3 = chartDetails[i];
+                        break;
+                    case 3:
+                        Lable4 = chartDetails[i];
+                        break;
+                    case 4:
+                        Lable5 = chartDetails[i];
+                        break;
+                    case 5:
+                        Lable6 = chartDetails[i];
+                        break;
+                    default:
+                        break;
+                }
+        }
+        public string Chartlable { set; get; }
+        public string Lable1 { set; get; }
+        public string Value1 { set; get; }
+        public string Lable2 { set; get; }
+        public string Value2 { set; get; }
+        public string Lable3 { set; get; }
+        public string Value3 { set; get; }
+        public string Lable4 { set; get; }
+        public string Value4 { set; get; }
+        public string Lable5 { set; get; }
+        public string Value5 { set; get; }
+        public string Lable6 { set; get; }
+        public string Value6 { set; get; }
+
+    }
+
+}

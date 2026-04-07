@@ -1,0 +1,252 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using System.Text.RegularExpressions
+@using System.Text
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Fax Information
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="row">
+                    <label class="col-md-12">* Select and/or Enter Fax Numbers (up to 10)</label>
+                </div>
+
+                <div class="row">
+                    <label class="col-md-6">Fax Number(s):</label>
+                    <label class="col-md-6">Attention: (First Last Name)</label>
+                </div>
+
+                <div class="table-bordered" style="padding: 5px;border: 1px solid;border-color:#ddd;">
+                    <div style="height:180px;overflow-y:auto;overflow-x:hidden">
+                        @foreach (var faxdata in faxDatas)
+                        {
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="checkbox" id=@("faxdata"+faxdata.Id)  name="@($"faxSelection{faxdata.Id}")" @onchange="(args => FaxSelected(args,faxdata))" style="margin-right: 5px" disabled="@(SelectedtData.Count >=10 && !faxdata.IsChecked)" />
+                                    <span>
+                                        @($"{faxdata.FirstName} {faxdata.MiddleInitial} {faxdata.LastName} - ({faxdata.PhoneNumber.AreaCode}) {faxdata.PhoneNumber.Exchange} - {faxdata.PhoneNumber.Number} ")
+                                    </span>
+                                </div>
+                                <div class="col-md-6" style="">
+                                    <RadzenTextBox id=@("faxAttention"+faxdata.Id) Name="@($"faxAttention{faxdata.Id}")"
+                                               onkeypress="return (event.charCode > 64 && event.charCode < 91) || (event.charCode> 96 && event.charCode< 123) || event.charCode== 8 || event.charCode== 32 || (event.charCode>= 48 && event.charCode<= 57)"
+                                               onkeyup="@(RemoveSpecialCharactersForFaxAttn(faxdata))"
+                                               @bind-Value=@faxdata.Attn
+                                               Style="width: 100%; max-width: 400px;" />
+
+                                </div>
+
+                            </div>
+                        }
+                        <span class="alert-dangerMsg" hidden="@(faxDatas.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+
+                    </div>
+                </div>
+
+
+                <!--fax textbox repeater-->
+                <div class="row">
+                    <div class="col-md-6"><label>Number(s): (i.e. 6095551212)</label> </div>
+                    <div class="col-md-6"><label>Attention: (First Last Name)</label> </div>
+                </div>
+                @foreach (var fax in faxDetails)
+                {
+                    <div class="row">
+                        <div class="col-md-6">
+
+                            <RadzenTextBox @bind-Value=@fax.faxNo
+                                       MaxLength="10" Name="faxNumber" onkeyup="@(NumbersOnly(fax))" 
+                                       Disabled="@fax.isDisabled" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))"
+                                       class="@LookupData.GetTextColorClass((string.IsNullOrEmpty(fax.faxNo) && (SelectedtData.Count == 0)) && !fax.isDisabled , false)" Style="width: 100%; max-width: 400px;" />
+                        </div>
+                        <div class="col-md-6">
+                            <RadzenTextBox @bind-Value=@fax.faxName
+                                       onkeypress="return (event.charCode > 64 && event.charCode < 91) || (event.charCode> 96 && event.charCode< 123) || event.charCode== 8 || event.charCode== 32 || (event.charCode>= 48 && event.charCode<= 57)"
+                                       onkeyup="@(RemoveSpecialCharactersForFaxName(fax))"
+                                       Name="faxNumber"
+                                       Disabled="@fax.isDisabled"
+                                       Style="width: 100%; max-width: 400px;" />
+                        </div>
+                    </div>
+                }
+                <div class="col-md-12" style="margin-top:10px;">
+                    <RadzenButton id="FaxAdd"  Click=@AddNewFaxSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;" hidden=@(faxDetails.Count == maxRecords ) />
+                    <RadzenButton id="RemoveFax"  Click=@RemoveFaxSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;" hidden=@(faxDetails.Count==0) />
+                </div>
+                <hr />
+                <!--Comment free form-->
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>* Comment:</label>
+                    </div>
+                    <div class="col-md-9">
+                        <RadzenTextBox id="FaxComment" @bind-Value=@faxComment Name="faxComment" Style="width: 100%; max-width: 400px;" class="@LookupData.GetTextColorClass(string.IsNullOrEmpty(faxComment) && (faxDetails.Count >0 || SelectedtData.Count > 0), firstRendeValue)" />
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<FaxData> faxDatas = new List<FaxData>();
+    List<FaxData> SelectedtData = new List<FaxData>();
+    public string faxComment;
+    List<FaxDetails> faxDetails = new List<FaxDetails>();
+
+    void FaxSelected(ChangeEventArgs isSelected, FaxData faxdata)
+    {
+        faxdata.IsChecked = (bool)isSelected.Value;
+        if (faxdata.IsChecked)
+            SelectedtData.Add(faxdata);
+        else
+            SelectedtData.Remove(faxdata);
+        RerenderSelectedFax();
+    }
+    void RerenderSelectedFax()
+    {
+        if (SelectedtData.Count > (maxRecords - faxDetails.Where(x => !x.isDisabled).Count()))
+        {
+            faxDetails.TakeLast(SelectedtData.Count - (maxRecords - indexCount)).ToList().ForEach(x => x.isDisabled = true);
+        }
+        else
+        {
+            faxDetails.Take(maxRecords - SelectedtData.Count).ToList().ForEach(x => x.isDisabled = false);
+        }
+        StateHasChanged();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    object NumbersOnly(FaxDetails faxData)
+    {
+        faxData.faxNo = GetFaxFormatedString(faxData.faxNo?.Trim());
+        return faxData;
+    }
+
+    object RemoveSpecialCharactersForFaxAttn(FaxData faxData)
+    {
+
+        faxData.Attn = RemoveSpecialCharacters(faxData.Attn?.Trim());
+        return faxData;
+
+    }
+    object RemoveSpecialCharactersForFaxName(FaxDetails faxData)
+    {
+        faxData.faxName = RemoveSpecialCharacters(faxData.faxName?.Trim());
+        return faxData;
+
+    }
+
+    string RemoveSpecialCharacters(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+        return Regex.Replace(text, @"[^0-9a-zA-Z\s]+", "");
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        var partyDetails = new MapperClass().GetMappedObjects(LookupData.SourceSystemEntity).OrderBy(x=>x.DisplayName);
+        faxDatas = partyDetails.Select(x => new FaxData()
+            {
+                Id = x.PartyID,
+                FirstName = x.FirstName,
+                MiddleInitial = x.MiddleName,
+                LastName = x.LastName,
+                Name = x.Name,
+                PhoneNumber = x.ElectronicsDetails?.PhoneFaxDetailList?.Where(y => y.Type == PhoneNumberType.Fax.ToString() && !string.IsNullOrEmpty(y.AreaCode) && !string.IsNullOrEmpty(y.Exchange))?.Select(y => y)?.FirstOrDefault()
+            }).Where(y => y.PhoneNumber != null).ToList();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(faxComment) && (SelectedtData.Count > 0 || faxDetails.Count > 0))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        if ( faxDetails.Any(x => string.IsNullOrEmpty(x.faxNo)))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        StringBuilder faxName = new StringBuilder();
+        faxName.Append(string.Join("", SelectedtData.Select(x => $"{(!string.IsNullOrEmpty(x.Attn) ? $"/name={x.Attn.Replace(" ", "%20")}" : "")}/fax=1{x.PhoneNumber.AreaCode}{x.PhoneNumber.Exchange}{x.PhoneNumber.Number}@fax.njmgroup.com;")));
+        faxName.Append(string.Join("", faxDetails.Select(x => $"{(!string.IsNullOrEmpty(x.faxName) ? $"/name={x.faxName.Replace(" ", "%20")}" : "")}/fax=1{GetFaxFormatedString(x.faxNo)}@fax.njmgroup.com;")));
+
+        var userSelection = ((OutputBase)LookupData.UserSelection);
+        userSelection.FaxSubject = faxComment;
+        userSelection.FaxAddress = faxName.ToString();
+    }
+    string GetFaxFormatedString(string faxNo)
+    {
+        return string.IsNullOrEmpty(faxNo) ? string.Empty : Regex.Replace(faxNo, "[^0-9]", "");
+    }
+    int maxRecords = 10;
+    int indexCount = 0;
+    public async void AddNewFaxSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            faxDetails.Insert(indexCount, new FaxDetails() { isDisabled = SelectedtData.Count >= (maxRecords - indexCount) });
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveFaxSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            faxDetails.RemoveAt(indexCount);
+
+        }
+        RerenderSelectedFax();
+        StateHasChanged();
+    }
+    public class FaxDetails
+    {
+        public string faxNo = string.Empty;
+        public string faxName = string.Empty;
+        public bool isDisabled = false;
+
+    }
+    public class FaxData
+    {
+        public string Id { get; set; }
+        public string FirstName { get; set; }
+        public string MiddleInitial { get; set; }
+        public string LastName { get; set; }
+        public string Name { get; set; }
+        public string Attn { get; set; } = string.Empty;
+        public PhoneFaxDetails PhoneNumber { get; set; }
+        public bool IsChecked { get; set; }
+    }
+    }

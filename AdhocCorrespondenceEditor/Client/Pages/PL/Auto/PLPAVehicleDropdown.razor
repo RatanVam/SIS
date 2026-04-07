@@ -1,0 +1,96 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Vehicle Information
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                @lableVehicle
+            </div>
+            <div class="col-md-6">
+                <RadzenDropDown class="@LookupData.GetTextColorClass(selectedVehicle, firstRendeValue && isRequired)"   TValue="Vehicle" Data=@vehicleList Change=@(args => OnVehicleChanged(args))  AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 800px;" >
+                     <Template>
+                                @($"{context.ModelYearNr} {context.VehicleTradeNm} {context.ModelNm} {context.ManufacturerVehicleIdentificationNr}")        
+                                </Template>
+                            </RadzenDropDown>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string lableVehicle = "* Vehicle:";
+    bool isRequired = true;
+    string selectedVehicle;
+    List<Vehicle> vehicleList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(isRequired), LookupData.documentData.documentEntity.DocumentId)))
+            {
+                isRequired = false;
+                lableVehicle = lableVehicle.Replace("*","");
+            }
+            vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy?.PolicyPeriod?.PolicyLines?.SelectMany(x => x.PersonalAutoLine?.VehicleCoverageDetails)?.Select(y => y.Vehicle))?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(selectedVehicle))
+        {
+            LookupData.errorDetails.IsInValid = isValidate && isRequired;
+            return;
+        }
+
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+
+        var vehicle = vehicleList.Where(x => x.VehicleId == selectedVehicle).FirstOrDefault();
+        if (vehicle != null)
+        {
+            if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+            userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                {
+                    ModelYearNr = vehicle.ModelYearNr,
+                    VehicleTradeNm = vehicle.VehicleTradeNm,
+                    ModelNm = vehicle.ModelNm,
+                    ManufacturerVehicleIdentificationNr = vehicle.ManufacturerVehicleIdentificationNr
+                });
+        }
+    }
+
+    public async void OnVehicleChanged(object myArgs)
+    {
+        selectedVehicle = myArgs == null ? string.Empty : ((Vehicle)myArgs).VehicleId;
+    }
+
+}

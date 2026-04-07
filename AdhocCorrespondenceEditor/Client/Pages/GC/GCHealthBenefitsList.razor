@@ -1,0 +1,73 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Health Benefits not Provided
+    </div> 
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                * Reason(s):
+            </div>
+             <div class="col-md-9">
+                @foreach(var reason in reasonsHealthBenefits)
+                {
+                  <div class="row" style="margin-left:5px">
+                        <RadzenSwitch id=@("HealthBenefits"+reason.DocumentDropdownLookupItemId) Change="@(args => OnDenialReasonChanged(args, @reason.DocumentDropdownLookupItemValue))" Style="margin-right:5px"/>  @reason.DocumentDropdownLookupItemCode  
+                  </div>
+               }
+            </div>
+        </div>
+  </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsHealthBenefits = new ();
+    List<string> reasons = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsHealthBenefits = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsHealthBenefits), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (reasons.Count == 0)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+
+            ((GCUserEntity)LookupData.UserSelection).HealthBenefits = new();
+        ((GCUserEntity)LookupData.UserSelection).HealthBenefits.AddRange(reasons);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

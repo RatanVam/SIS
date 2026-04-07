@@ -1,0 +1,112 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-6">
+        <label class="@(invlaidValidSelection?"lableRedColor":"lableBlackColor")">Driver: (Select and/or enter up to 3 drivers)</label>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-5">
+               @foreach(var displayName in partyList)
+         {
+                        <div style="margin-top: 2px">
+                       <RadzenSwitch Change="@(args => OnDriverChanged(args, displayName))" Value ="@selectedDriver.Contains(displayName)"/> @displayName  
+                           </div>
+         }
+    </div>
+        <div class="col-md-6" >
+            <div style="margin-top: 2px"><RadzenTextBox class="DropDownSize" @bind-Value=@inputDriver1  MaxLength="75" Disabled = "@(selectedDriver.Count>2)"/></div>
+            <div style="margin-top: 2px"><RadzenTextBox class="DropDownSize" @bind-Value=@inputDriver2  MaxLength="75"  Disabled = "@(selectedDriver.Count>1)"/></div>
+            <div style="margin-top: 2px"><RadzenTextBox class="DropDownSize" @bind-Value=@inputDriver3  MaxLength="75"  Disabled = "@(selectedDriver.Count>0)"/></div>
+        </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    string inputDriver1,inputDriver2,inputDriver3= string.Empty;
+    List<string> partyList = new();
+    List<string> selectedDriver= new();
+    protected override async Task OnInitializedAsync()
+    {
+
+        var partys = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).SelectMany(z => z.AssociatedParties.Where(x => x.PartyTypeCd.ToUpper() == ApplicationConstants.Person.ToUpper())).ToList();
+
+        if (partys != null)
+            foreach (var party in partys)
+                partyList.Add($"{GetName(party.Person.PersonName.FirstGivenNm)}{GetName(party.Person.SecondGivenNameInitial)}{GetName(party.Person.PersonName.FamilyNm)}{GetName(party.Person.PersonName.FamilyNameGenerationCd)}".Trim());
+        for (int i = 0; i < partyList.Count && i < 3; i++)
+            selectedDriver.Add(partyList[i]);
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    string GetName(string? Value)
+    {
+        return string.IsNullOrEmpty(Value) ? string.Empty : $"{Value} ";
+    }
+    bool invlaidValidSelection = false;
+    void DocumentSubmitted(bool isValidate)
+    {
+        List<string> selectedTotalDrivers= new();
+        selectedTotalDrivers.AddRange(selectedDriver);
+        if (!string.IsNullOrEmpty(inputDriver1?.Trim()))
+            selectedTotalDrivers.Add(inputDriver1?.Trim());
+        if (!string.IsNullOrEmpty(inputDriver2?.Trim()))
+            selectedTotalDrivers.Add(inputDriver2?.Trim());
+        if (!string.IsNullOrEmpty(inputDriver3?.Trim()))
+            selectedTotalDrivers.Add(inputDriver3?.Trim());
+
+        invlaidValidSelection = selectedTotalDrivers.Count > 3;
+        if(invlaidValidSelection)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userSelection.PolicyDriverDetails == null)
+            userSelection.PolicyDriverDetails = new List<PolDriveInfo>();
+        foreach (var item in selectedTotalDrivers)
+            userSelection.PolicyDriverDetails.Add(new PolDriveInfo
+                {
+                    DriverName = item?.Trim()
+                });
+    }
+
+    public async void OnDriverChanged(bool value, string displayName)
+    {
+        if (value)
+        {
+            if (selectedDriver.Count < 3)
+                selectedDriver.Add(displayName.Trim());
+        }
+        else
+            selectedDriver.Remove(displayName.Trim());
+        if (selectedDriver.Count > 2)
+            inputDriver1 = string.Empty;
+        if (selectedDriver.Count > 1)
+            inputDriver2 = string.Empty;
+        if (selectedDriver.Count > 0)
+            inputDriver3 = string.Empty;
+
+    }
+
+}

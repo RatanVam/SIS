@@ -1,0 +1,60 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        PIP Deductible
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   PIP Deductible:
+                </div>
+                <div class="col-md-3">
+                            @((string.IsNullOrEmpty(pIPData))?string.Empty:"$" + @pIPData)
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            pIPData = ((GCSourceSystemEntity)LookupData.SourceSystemEntity)?.Claim?.ClaimPolicy?.PIPDeductible;
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    string pIPData = string.Empty;
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((GCUserEntity)LookupData.UserSelection).PIPData = pIPData;
+    }
+
+}

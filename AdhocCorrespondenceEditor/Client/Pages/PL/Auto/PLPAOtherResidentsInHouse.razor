@@ -1,0 +1,166 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Other Residents in Household
+    </div> 
+    <div class="panel-body">
+    @foreach (var obj in otherDriverDetails)
+    {
+        <div class="row">
+            <div class="col-md-3">
+                Driver Name:
+            </div>
+            <div class="col-md-4">
+                <RadzenDropDown class="DropDownSize" TValue="PartyAddressUI" Data=@partyList Change=@(args => OnDriverChanged(obj,args)) 
+                    ValueProperty="PartyID" TextProperty="DisplayName" AllowClear=true  Placeholder="--Select--" />
+            </div>
+            <div class="col-md-4">
+                <RadzenTextBox class="DropDownSize" @bind-Value=@obj.InputDriverName Disabled ="@(!string.IsNullOrEmpty(obj.DriverName))" MaxLength="150" />
+            </div>
+        </div>
+        <div class="row">
+              <div class="col-md-3"></div>
+  <div class="col-md-9" style="margin-top: 2px">   
+        <div class="row">
+        @foreach(var reason in reasonsHousehold)
+        {
+            <div class="col-md-4" style="margin-top: 2px">
+                <RadzenSwitch Change="@(args => OnHouseholdOptionChanged(args, @reason.DocumentDropdownLookupItemValue,obj))" Style="margin-right:1px"/>  @reason.DocumentDropdownLookupItemCode  
+        </div>
+        }
+                  </div>  </div>
+         </div>
+            <hr />
+        }
+        <div class="col-md-12" style="margin-top: 15px">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<HouseholdDriver> otherDriverDetails = new List<HouseholdDriver>();
+
+    List<DocumentDropdownLookupDataEntity>  reasonsHousehold = new ();
+
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        string plDriver;
+        var driverInfoTypes = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(plDriver), LookupData.documentData.documentEntity.DocumentId).Split(',');
+        var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+        partyList = partyFullList.Where(y => (driverInfoTypes.Any(y.PartyRoles.Contains)))?.OrderBy(x=>x.DisplayName)?.ToList();
+
+        reasonsHousehold = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsHousehold), LookupData.documentData.documentEntity.DocumentId)}/"));
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (otherDriverDetails.Count == 0)
+            return;
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.PolicyDriverDetails == null)
+                userDate.PolicyDriverDetails = new List<PolDriveInfo>();
+            foreach (var obj in otherDriverDetails)
+            {
+                userDate.PolicyDriverDetails.Add(new PolDriveInfo
+                    {
+                        DriverName = string.IsNullOrEmpty(obj.DriverName) ? obj.InputDriverName?.Trim() : obj.DriverName,
+                        DriverNameInd = obj.DriverNameInd,
+                        DateOfBirth = obj.DateOfBirth,
+                        MaritalStatus = obj.MaritalStatus,
+                        RelationToApplicant = obj.RelationToApplicant,
+                        InsuranceInfo = obj.InsuranceInfo,
+                        LicenseInfo = obj.LicenseInfo,
+                        ValidLicenceInfo = obj.ValidLicenceInfo,
+                        PriorLicenseInfo = obj.PriorLicenseInfo,
+                        ProofOfResidency = obj.ProofOfResidency,
+                        OtherHouseholdInd = obj.OtherHouseholdInd
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnDriverChanged(HouseholdDriver Obj, object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            Obj.DriverName = string.Empty;
+        else
+            Obj.DriverName = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(Obj.DriverName))
+            Obj.InputDriverName = string.Empty;
+    }
+    public async void OnHouseholdOptionChanged(bool isSelected, string myArgs, HouseholdDriver claimObj)
+    {
+        Utility.UpdateValue(claimObj, myArgs, isSelected);
+    }
+
+    int indexCount = 0;
+    int maxRecords = 16;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            otherDriverDetails.Insert(indexCount,new HouseholdDriver());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            otherDriverDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    public class HouseholdDriver
+    {
+        public string DriverName { get; set; } = string.Empty;
+        public string InputDriverName { get; set; } = string.Empty;
+
+        public bool DriverNameInd { get; set; }
+        public bool DateOfBirth { get; set; }
+        public bool MaritalStatus { get; set; }
+        public bool RelationToApplicant { get; set; }
+        public bool InsuranceInfo { get; set; }
+        public bool LicenseInfo { get; set; }
+        public bool ValidLicenceInfo { get; set; }
+        public bool PriorLicenseInfo { get; set; }
+        public bool ProofOfResidency { get; set; }
+        public bool OtherHouseholdInd { get; set; } = true;
+
+
+    }
+}

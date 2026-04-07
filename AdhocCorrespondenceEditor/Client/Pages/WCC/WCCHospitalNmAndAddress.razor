@@ -1,0 +1,141 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Hospital
+    </div>
+
+    <div class="panel-body">
+
+            <div class="row">
+                <div class="col-md-3">
+                    Hospital Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown TValue="PartyAddressUI"class="DropDownSize" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-3">
+                 Hospital Address:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown class="DropDownSize" @ref="childComponent" TValue="ControlClass.Address" Data=@partyAddresses  ValueProperty="ID" 
+                   Value=@AddressID Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                        @($"({context.AddressUseCd}) {context.Line1Tx} {context.Line2Tx} {context.Line3Tx} , {context.Municipality} {context.CountrySubdivision} {context.PostalCd}")        
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(partyAddresses.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+
+
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public RadzenDropDown<ControlClass.Address> childComponent { set => components.Add(value); }
+    public List<RadzenDropDown<ControlClass.Address>> components = new List<RadzenDropDown<ControlClass.Address>>();
+
+    public string partyID { set; get; }
+    public string AddressID { set; get; }
+    List<PartyAddressUI> partyList = new();
+    public List<ControlClass.Address> partyAddresses = new List<ControlClass.Address>();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> wCCHospitalRoles;
+            wCCHospitalRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wCCHospitalRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList(); ;
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(wCCHospitalRoles.Contains)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+
+            if (myArgs == null)
+            {
+                partyID = string.Empty;
+                partyAddresses = new List<ControlClass.Address>();
+            }
+            else
+            {
+                partyID = myArgs.ToString();
+                partyAddresses = partyList.Where(x => x.PartyID == myArgs.ToString()).FirstOrDefault().PartyAddresses;
+                AddressID = partyAddresses?.FirstOrDefault()?.ID;
+            }
+            if (string.IsNullOrEmpty(AddressID))
+                foreach (var cntl in components)
+                    cntl.Reset();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnAddressChanged(object myArgs)
+    {
+        if (myArgs == null)
+            AddressID = string.Empty;
+        else
+            AddressID = myArgs.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        if (string.IsNullOrEmpty(partyID))
+            return;
+
+        var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+
+        if (selectedParty != null)
+        {
+        var selectedAddress = selectedParty.PartyAddresses?.Where(x => x.ID == AddressID)?.FirstOrDefault();
+            userSelection.HospitalDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address
+                {
+                    DisplayName = selectedParty.DisplayName,
+                    Line1Tx = selectedAddress?.Line1Tx,
+                    Line2Tx = selectedAddress?.Line2Tx,
+                    Line3Tx = selectedAddress?.Line3Tx,
+                    MunicipalityNm = selectedAddress?.Municipality,
+                    CountrySubdivisionNm = selectedAddress?.CountrySubdivision,
+                    PostalCd = selectedAddress?.PostalCd,
+                    Country = selectedAddress?.Country
+                };
+        }
+    }
+
+}

@@ -1,0 +1,200 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+
+@inject HttpClient Http
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Specific Required Information
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <span hidden="@(!isAtLeastOneSelected)">*Select at least one option below</span>
+                <span class="alert-dangerMsg" hidden="@isAtLeastOneSelected">*Select at least one option below</span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="CompletedAONI" @bind-Value=@isCompletedAONI Change="@(args => OnSpecificRequiredInfoChanged(args))" />Completed Affidavit of No Insurance
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="CompletedPIPApp" @bind-Value=@isCompletedPIPApp Change="@(args => OnSpecificRequiredInfoChanged(args))" />Completed PIP Application
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="IdentificationDocs" @bind-Value=@isIdentificationDocs Change="@(args => OnSpecificRequiredInfoChanged(args))" />Identification Documents
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="MarriageLicense" @bind-Value=@isMarriageLicense Change="@(args => OnSpecificRequiredInfoChanged(args))" />Marriage License
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <RadzenSwitch id="ProofOfResidency" @bind-Value=@isProofOfResidency Change="@(args => OnSpecificRequiredInfoChanged(args))" />Proof of Residency
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isProofOfResidency || isCompletedPIPApp)
+{
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            Claimant
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                    *Claimant Name:
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown id="ClaimantNameOnly" class="DropDownSize" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID"
+                                    Change=@(args => OnPartyChanged(args)) AllowClear=true Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    bool isCompletedAONI;
+    bool isCompletedPIPApp;
+    bool isIdentificationDocs;
+    bool isMarriageLicense;
+    bool isProofOfResidency;
+    bool isAtLeastOneSelected = true;
+    string documentOtherType1;
+    string documentOtherType2;
+
+    List<PartyAddressUI> partyList = new();
+    string partyID;
+    string displayName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string claimantRoles;
+
+            documentOtherType1 = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(documentOtherType1), LookupData.documentData.documentEntity.DocumentId);
+            documentOtherType2 = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(documentOtherType2), LookupData.documentData.documentEntity.DocumentId);
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles));
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+
+            if (!string.IsNullOrEmpty(claimantRoles))
+            {
+                var partyRoles = claimantRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => x.PartyRoles.Any(partyRoles.Contains))?.OrderBy(x => x.DisplayName)?.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    async void DocumentSubmitted(bool isValidate)
+    {
+        if (!isCompletedAONI && !isCompletedPIPApp && !isIdentificationDocs && !isMarriageLicense && !isProofOfResidency)
+            isAtLeastOneSelected = false;
+        else
+            isAtLeastOneSelected = true;
+
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+
+        if (isAtLeastOneSelected == false || ((isProofOfResidency || isCompletedPIPApp) && string.IsNullOrEmpty(displayName)))
+        {
+            LookupData.errorDetails.IsOutputInValid = true;
+            LookupData.errorDetails.Error = "Please enter all the mandatory(*) fields";
+            return;
+        }
+
+        userSelection.SpecificRequiredInformation = new();
+        userSelection.SpecificRequiredInformation.CompletedAffidavitOfNoInsurance = isCompletedAONI;
+        userSelection.SpecificRequiredInformation.CompletedPipApplication = isCompletedPIPApp;
+        userSelection.SpecificRequiredInformation.IdentificationDocuments = isIdentificationDocs;
+        userSelection.SpecificRequiredInformation.MarriageLicense = isMarriageLicense;
+        userSelection.SpecificRequiredInformation.ProofOfResidency = isProofOfResidency;
+
+        if ((isProofOfResidency || isCompletedPIPApp) && !string.IsNullOrEmpty(displayName))
+        {
+            userSelection.ClaimantNameAddress = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Address
+                {
+                    DisplayName = displayName
+                };
+            userSelection.ClaimantNameAddressDOB = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.InvolvedParties.Where(x => x.id.ToString() == partyID).FirstOrDefault()?.DateOfBirth;
+        }
+
+
+    }
+    public async void OnSpecificRequiredInfoChanged(bool myArgs)
+    {
+
+
+        // Send INBND_DOCTYPE to Inspire for 2D Imaging Barcode
+        if (isCompletedAONI && !isCompletedPIPApp)
+            LookupData.documentData.documentEntity.DocumentOtherType = documentOtherType1;
+        else
+            LookupData.documentData.documentEntity.DocumentOtherType = documentOtherType2;
+
+        await GetOnbaseID();
+    }
+
+    async Task GetOnbaseID()
+    {
+        string URL = $"{ApplicationConstants.UrlExternalserviceOnbase}gc/{LookupData.documentData.documentEntity.DocumentOtherType}";
+
+        var documntOnbaseDetails = await Http.GetFromJsonAsync<int>(URL);
+
+        if (documntOnbaseDetails == 0)
+        {
+            LookupData.errorDetails.Error = "We’re sorry, an error occurred while getting (OnBase)Document id.";
+            StateHasChanged();
+        }
+        else
+        {
+            LookupData.documentData.DocumentOnbaseID = documntOnbaseDetails.ToString();
+        }
+    }
+
+    void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            partyID = myArgs == null ? string.Empty : partyList?.Where(x => x?.PartyID == myArgs.ToString()).FirstOrDefault()?.PartyID;
+            displayName = myArgs == null ? string.Empty : partyList?.Where(x => x?.PartyID == myArgs.ToString()).FirstOrDefault()?.DisplayName;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+}

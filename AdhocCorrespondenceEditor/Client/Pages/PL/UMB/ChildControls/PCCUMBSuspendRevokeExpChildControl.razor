@@ -1,0 +1,99 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="row" >
+        <div class="col-md-6"><RadzenSwitch @bind-Value=@isNDEOfferChecked />  NDE Offer</div>
+    </div>
+    <div class="row" >
+        <div class="col-md-3">Licensed Family Member:</div>
+        <div class="col-md-4"> <RadzenDropDown class="DropDownSize300" TValue="PartyAddressUI" TextProperty="DisplayName" ValueProperty="PartyID" Data=@partyList Change=@(args => OnLicensedFamilyMemberChanged(args))  AllowClear=true  Placeholder="--Select--"/></div>        
+        <div class="col-md-4"> <RadzenTextBox class="DropDownSize300" @bind-Value=@licensedFamilyMemberInput Disabled ="@(!string.IsNullOrEmpty(licensedFamilyMember))" MaxLength="150"/> </div>
+    </div>
+    <div class="row" >
+        <div class="col-md-3">*License MVR Suspended Date:</div>
+        <div class="col-md-4"><RadzenDatePicker TValue="DateTime" class="@LookupData.GetTextColorClassCalander((licenseMVRSuspendedDate == DateTime.MinValue)?string.Empty:"1", false)" 
+    DateFormat="yyyy-MM-dd" Placeholder="YYYY-MM-DD" Change=@(args => OnLicenseMVRSuspendedDateChange(args))  Style="width: 100%; max-width: 300px;"/>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    bool isRequired = true;
+    string selectedDriver, inputDriverName = string.Empty;
+    List<PartyAddressUI> partyList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var driverInfo = (((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.HouseholdMembers)).ToList();
+            partyList = PCUMBNamesAddress.GetPersonName(driverInfo);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    string licensedFamilyMember,licensedFamilyMemberInput;
+    DateTime licenseMVRSuspendedDate;
+    bool isNDEOfferChecked;
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (((PLHoUmbDwUserEntity)LookupData.UserSelection).OHCancellationNonRenewalDetail == null)
+            ((PLHoUmbDwUserEntity)LookupData.UserSelection).OHCancellationNonRenewalDetail = new();
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).OHCancellationNonRenewalDetail.IsNDEOffer = isNDEOfferChecked;
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).OHCancellationNonRenewalDetail.LicensedFamilyMember = string.IsNullOrEmpty(licensedFamilyMember) ? licensedFamilyMemberInput?.Trim() : licensedFamilyMember;
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).OHCancellationNonRenewalDetail.LicenseMVRSuspendedDate = licenseMVRSuspendedDate;
+    }
+
+
+    async void OnLicensedFamilyMemberChanged(object myArgs)
+    {
+        var id = myArgs == null ? string.Empty : myArgs.ToString();
+        if (string.IsNullOrEmpty(id))
+            licensedFamilyMember = string.Empty;
+        else
+            licensedFamilyMember = partyList.Where(x => x.PartyID == id).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(licensedFamilyMember))
+            licensedFamilyMemberInput = string.Empty;
+    }
+
+    List<Type> selectedList= new ();
+
+    async void OnLicenseMVRSuspendedDateChange(object myArgs)
+    {
+        if (myArgs != null)
+            licenseMVRSuspendedDate = (DateTime)myArgs;
+    }
+
+
+}

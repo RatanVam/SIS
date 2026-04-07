@@ -1,0 +1,155 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Service Event Information
+    </div>
+        <div class="panel-body">
+
+        @foreach (var obj in serviceDetails)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                    Service Event Date:
+                </div>
+                <div class="col-md-4">
+                     <RadzenDatePicker class="DropDownSize" @bind-Value=@obj.Date DateFormat="yyyy-MM-dd" Change=@(args => OnDateChange(obj,args)) ShowCalendarWeek/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    Service Vehicle:
+                </div>
+                <div class="col-md-4">
+                    <RadzenDropDown class="DropDownSize" TValue="Vehicle" Data=@vehicleList Change=@(args => OnVehiclChanged(obj,args))  AllowClear=true  Placeholder="--Select--" >
+                           <Template>
+                        @($"{context.ModelYearNr} {context.VehicleTradeNm} ")        
+                        </Template>
+                    </RadzenDropDown>
+                </div>
+                <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize" @bind-Value=@obj.VehicleText Disabled ="@(!string.IsNullOrEmpty(obj.VehicleID))" MaxLength="150" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    Service Event Description:
+                </div>
+                <div class="col-md-4">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@ServiceEventDescriptions Change=@(args => OnDescriptionChanged(obj,args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            <br />
+        }
+
+        <div class="row col-md-12" style="margin-top: 15px">
+            <RadzenButton Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" style="margin-right:10px;width: 100%; max-width: 90px;" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<ServiceEventDetails> serviceDetails = new List<ServiceEventDetails>();
+
+    List<Vehicle> vehicleList = new();
+    IEnumerable<DocumentDropdownLookupDataEntity> ServiceEventDescriptions;
+    protected override async Task OnInitializedAsync()
+    {
+        vehicleList = (((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.PersonalAutoLine.VehicleCoverageDetails).Select(y => y.Vehicle)).ToList();
+        ServiceEventDescriptions = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(ServiceEventDescriptions), LookupData.documentData.documentEntity.DocumentId)}/"));
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (serviceDetails.Count == 0)
+            return;
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.ServiceEvents == null)
+                userDate.ServiceEvents = new List<ServiceEvent>();
+            foreach (var obj in serviceDetails)
+            {
+                var vehicle = vehicleList.Where(x => x.VehicleId == obj.VehicleID).FirstOrDefault();
+                userDate.ServiceEvents.Add(new ServiceEvent
+                    {
+                        Date = obj.Date,
+                        VehicleText = string.IsNullOrEmpty(obj.VehicleID) ? obj.VehicleText?.Trim() : $"{vehicle.ModelYearNr} {vehicle.VehicleTradeNm}",
+                        Description = obj.Description
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    public async void OnVehiclChanged(ServiceEventDetails mvrObj, object myArgs)
+    {
+        mvrObj.VehicleID = myArgs == null ? string.Empty :  ((Vehicle)myArgs).VehicleId;
+        if (!string.IsNullOrEmpty(mvrObj.VehicleID))
+            mvrObj.VehicleText = string.Empty;
+    }
+    void OnDateChange(ServiceEventDetails mvrObj, object myArgs)
+    {
+        mvrObj.Date = myArgs == null ? null : (DateTime)myArgs;
+    }
+    void OnDescriptionChanged(ServiceEventDetails mvrObj, object myArgs)
+    {
+         mvrObj.Description = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+    }
+    int indexCount = 0;
+    int maxRecords = 16;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            serviceDetails.Insert(indexCount,new ServiceEventDetails());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            serviceDetails.RemoveAt(indexCount);
+
+        }
+        StateHasChanged();
+    }
+
+    public class ServiceEventDetails
+    {
+        public DateTime? Date { get; set; }
+        public string VehicleID { get; set; } = string.Empty;
+        public string VehicleText { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+}

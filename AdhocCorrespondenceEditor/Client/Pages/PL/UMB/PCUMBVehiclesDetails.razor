@@ -1,0 +1,122 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+            <div class="row">
+        <div class="col-md-3">
+            Vehicle
+        </div>
+            <div class="col-md-4">
+                <RadzenDropDown class="DropDownSize300" TValue="VehicleExposure" Data=@vehicleExposureList  ValueProperty="id" Change=@(args => OnVehicleChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                <Template>
+                @($"{context.Vehicle.ModelYearNr} {context.Vehicle.VehicleTradeNm}")        
+                </Template>
+            </RadzenDropDown>
+        </div>
+            <div class="col-md-4">
+            <RadzenTextBox class="DropDownSize300"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedVehicleID))" MaxLength="150" />
+        </div>
+    </div>
+            <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@vehicleType  Disabled =@GetDisabledStatus()/> Vehicle Type </div>
+            <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@vehicleYear  Disabled =@GetDisabledStatus()/> Vehicle Year </div></div>
+            <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@vehicleMake  Disabled =@GetDisabledStatus()/> Vehicle Make </div>
+            <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@underlyingPolicy  Disabled =@GetDisabledStatus()/> Underlying Policy </div></div>
+            <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@vehicleOwnership  Disabled =@GetDisabledStatus()/> Vehicle Ownership </div>
+            <div class="col-md-4"style="margin-top:5px"> <RadzenSwitch @bind-Value=@vehicleRegistration  Disabled =@GetDisabledStatus()/> Vehicle Registration </div></div>
+<hr />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedVehicleID = string.Empty;
+    string addressValue = string.Empty;
+    IEnumerable<VehicleExposure> vehicleExposureList;
+    bool vehicleType, vehicleYear, vehicleMake, underlyingPolicy, vehicleOwnership, vehicleRegistration;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            vehicleExposureList = ((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.VehicleExposures);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (GetDisabledStatus())
+            return;
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.VehicleDetails == null)
+            userSelection.VehicleDetails = new();
+        if (string.IsNullOrEmpty(selectedVehicleID) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+        try
+        {
+            AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.VehicleDetails tempVehicle = new();
+            if (string.IsNullOrEmpty(selectedVehicleID))
+            {
+                tempVehicle.VehicleDetail = addressValue?.Trim();
+            }
+            else
+            {
+                var selectedVehicle = vehicleExposureList.Where(x => x.id == selectedVehicleID).FirstOrDefault();
+                tempVehicle.VehicleDetail = $"{selectedVehicle.Vehicle.ModelYearNr} {selectedVehicle.Vehicle.VehicleTradeNm}";
+
+            }
+            tempVehicle.VehicleType = vehicleType;
+            tempVehicle.VehicleYear = vehicleYear;
+            tempVehicle.VehicleMake = vehicleMake;
+            tempVehicle.UnderlyingPolicy = underlyingPolicy;
+            tempVehicle.VehicleOwnership = vehicleOwnership;
+            tempVehicle.VehicleRegistration = vehicleRegistration;
+            userSelection.VehicleDetails.Add(tempVehicle);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+
+    }
+    public async void OnVehicleChanged(object myArgs)
+    {
+        selectedVehicleID = myArgs == null ? string.Empty : myArgs.ToString();
+        if(!string.IsNullOrEmpty(selectedVehicleID))
+            addressValue = string.Empty;
+        else
+            ResetRadioButtons();
+    }
+    public async void OnTextChanged(object myArgs)
+    {
+        if (string.IsNullOrEmpty(selectedVehicleID)&& string.IsNullOrEmpty(addressValue) )
+            ResetRadioButtons();
+    }
+    async void ResetRadioButtons()
+    {
+        vehicleType = vehicleYear = vehicleMake = underlyingPolicy = vehicleOwnership = vehicleRegistration = false;
+    }
+    bool GetDisabledStatus()
+    {
+        return string.IsNullOrEmpty(selectedVehicleID) && string.IsNullOrEmpty(addressValue);
+    }
+}

@@ -1,0 +1,240 @@
+﻿@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+<div class="panel panel-primary">
+    <div class="panel-heading">Author Information</div>
+    <div class="panel-body">
+        <div class="form-group">
+
+            <!--Author role dropdown list-->
+            <div class="row">
+                <div class="col-md-3"><label>* Author's Role:</label></div>
+                <div class="col-md-9">
+                    <RadzenDropDown TValue ="string" Name="RoleSelection" class="@LookupData.GetTextColorClass(selectedAuthorRole, firstRendeValue )" Data=@roleData
+                                           Change=@(args => OnRoleChanged(args)) AllowClear=true Value="@selectedAuthorRole" Placeholder="--Select--"   Style="width: 100%; max-width: 400px;" />
+
+                    <span class="alert-dangerMsg" hidden="@(roleData.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+            <!--Author name dropdown list-->
+            <div class="row" style="margin-top:5px">
+                <div class="col-md-3"><label>* Author's Name:</label></div>
+                <div class="col-md-9">
+                    <RadzenDropDown @ref=@childComponent class="@LookupData.GetTextColorClass(selectedAuthorId, firstRendeValue)"  TValue="ControlClass.PartyAddressUI"  Data=@authorDataByRole TextProperty="DisplayName" ValueProperty="PartyID"
+                                    Value=@selectedAuthorId Change=@(args => OnAuthorChanged(args)) AllowClear=true Name="AuthorSelection" Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                        <Template>
+                            @($"{context.FirstName} {context.LastName}")
+                        </Template>
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(authorDataByRole.Count > 0 || string.IsNullOrEmpty(selectedAuthorRole))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" style="margin-top:5px">
+                <div class="col-md-3"><label>* Physical Therapy ID:</label></div>
+                <div class="col-md-9">
+                    <RadzenDropDown class="@LookupData.GetTextColorClass(selectedPhysicalTherapyID, firstRendeValue)" Data=@physicalTherapyIDs 
+                                     @bind-Value=selectedPhysicalTherapyID  AllowClear=true Placeholder="--Select--"  Style="width: 100%; max-width: 400px;">
+                    </RadzenDropDown>
+                    <span class="alert-dangerMsg" hidden="@(physicalTherapys.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public RadzenDropDown<ControlClass.PartyAddressUI> childComponent { set => components.Add(value); }
+    public List<RadzenDropDown<ControlClass.PartyAddressUI>> components = new List<RadzenDropDown<ControlClass.PartyAddressUI>>();
+
+    public string selectedAuthorRole { set; get; }
+    public string selectedAuthorId { set; get; }
+    public PartyAddressUI selectedAuthor { set; get; }
+    List<PartyAddressUI> partyList = new();
+    List<PartyAddressUI> authorList = new();
+    List<PartyAddressUI> authorDataByRole = new();
+
+    List<string> roleData = new();
+    List<PhysicalTherapy> physicalTherapys = new List<PhysicalTherapy>();
+    List<string> physicalTherapyIDs = new List<string>();
+    string selectedPhysicalTherapyID = string.Empty;
+    string AddressID { set; get; }
+    List<ControlClass.Address> partyAddresses = new List<ControlClass.Address>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> wCCAuthorRoles;
+            wCCAuthorRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(wCCAuthorRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            authorList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity, includeCurrentUser: true);
+            selectedAuthorRole = ApplicationConstants.CurrentUser;
+            authorList.ForEach(x => Array.ForEach(x.PartyRoles, y => { if (wCCAuthorRoles.Contains(y) && !roleData.Contains(y)) roleData.Add(y); }));
+            roleData = roleData.OrderBy(x => x).Append(selectedAuthorRole).ToList();
+            authorDataByRole = GetAuthorDataForGivenRole(selectedAuthorRole);
+            selectedAuthorId = authorDataByRole?.FirstOrDefault()?.PartyID;
+            selectedAuthor = authorDataByRole?.Where(x => x.PartyID == selectedAuthorId).FirstOrDefault();
+            SendFromEmailToEmailControl();
+
+            physicalTherapys = ((WCCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.PhysicalTherapys.OrderBy(x => x.ID).ToList();
+            physicalTherapyIDs = physicalTherapys?.Select(x => x.ID)?.Distinct()?.ToList();
+
+            List<int> physicalTherapyIDsSorted = new List<int>();
+            int convertID = -1;
+            foreach (var id in physicalTherapyIDs)
+            {
+                if (int.TryParse(id, out convertID))
+                    physicalTherapyIDsSorted.Add(convertID);
+            }
+            selectedPhysicalTherapyID = physicalTherapyIDsSorted?.Max().ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+   
+
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public List<PartyAddressUI> GetAuthorDataForGivenRole(string roleName)
+    {
+        return authorList.Where(x => x.PartyRoles.Contains(roleName)).OrderBy(x => $"{x.FirstName}{x.LastName}").ToList();
+    }
+
+    public async void OnRoleChanged(object myArgs)
+    {
+        try
+        {
+            selectedAuthor = null;
+
+            if (myArgs == null)
+            {
+                selectedAuthorRole = string.Empty;
+                authorDataByRole = new List<PartyAddressUI>();
+            }
+            else
+            {
+                selectedAuthorRole = myArgs.ToString();
+                authorDataByRole = GetAuthorDataForGivenRole(selectedAuthorRole);
+                if (authorDataByRole != null && authorDataByRole.Count == 1)
+                {
+                    selectedAuthorId = authorDataByRole.FirstOrDefault()?.PartyID;
+                    selectedAuthor = authorDataByRole.Where(x => x.PartyID == selectedAuthorId).FirstOrDefault();
+                }
+            }
+            SendFromEmailToEmailControl();
+
+            //foreach (var cntl in components)
+            //    cntl.Reset();
+            StateHasChanged();
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnAuthorChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                selectedAuthorId = string.Empty;
+                selectedAuthor = null;
+            }
+            else
+            {
+                selectedAuthorId = myArgs.ToString();
+                selectedAuthor = authorDataByRole.Where(x => x.PartyID == selectedAuthorId).FirstOrDefault();
+            }
+            SendFromEmailToEmailControl();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    void OnTherapyIDChanged(string myArgs)
+    {
+        selectedPhysicalTherapyID = string.IsNullOrEmpty(myArgs) ? string.Empty : myArgs;
+    }
+
+    void SendFromEmailToEmailControl()
+    {
+        LookupData.EmailFromControl = selectedAuthor?.ElectronicsDetails?.EmailAddress?.FirstOrDefault();
+        if (LookupData.SendEmailFromControl != null)
+            LookupData.SendEmailFromControl(LookupData.EmailFromControl);
+
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+
+        if (selectedAuthor == null || string.IsNullOrEmpty(selectedPhysicalTherapyID))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        userSelection.AuthorDetails = new Author()
+            {
+                CompletedName = selectedAuthor.DisplayName.Trim(),
+                ExecInd = selectedAuthor.IsOfficeOrManager ? "Y" : "N",
+                Uid = selectedAuthor.EmployeeUserName,
+                Uid_Arch = selectedAuthor.EmployeeUserName,
+                Creds = selectedAuthor.Creds,
+                Title = selectedAuthor.JobTitle,
+                Email = selectedAuthor.ElectronicsDetails?.EmailAddress?.FirstOrDefault(),
+                Name = $"{selectedAuthor.FirstName} {selectedAuthor.LastName}".Trim()
+            };
+        var FaxDetails = selectedAuthor.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Fax.ToString() && x.Category == PhoneNumberCategory.Business.ToString())?.LastOrDefault();
+        if (FaxDetails != null)
+            userSelection.AuthorDetails.Fax = $"({FaxDetails.AreaCode}) {FaxDetails.Exchange}-{FaxDetails.Number}";
+        var PhnNumDetails = selectedAuthor.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString() && x.Category == PhoneNumberCategory.Business.ToString())?.LastOrDefault();
+        if (PhnNumDetails != null)
+        {
+            userSelection.AuthorDetails.WorkPhn = $"({PhnNumDetails.AreaCode}) {PhnNumDetails.Exchange}-{PhnNumDetails.Number}";
+            userSelection.AuthorDetails.WorkExt = PhnNumDetails.Extension;
+
+        }
+        var selectedTherapy = physicalTherapys.Where(x => x.ID == selectedPhysicalTherapyID).FirstOrDefault();
+        userSelection.PhysicalTherapyInfo = new PhysicalTherapyDetails()
+            {
+                Service = selectedTherapy?.ServiceType,
+                PrimaryBodyPart = selectedTherapy?.PrimaryBodyPart,
+                DetailedBodyPart = selectedTherapy?.DetailedBodyPart,
+                Cerrification = selectedTherapy?.Certification,
+                RequestedVisits = selectedTherapy?.RequestedVisits,
+                TotalVisits = selectedTherapy?.TotalVisitsToDate,
+                AutherNumberVisits = selectedTherapy?.AuthorizedVisits,
+                AprovalStatus = selectedTherapy?.Approved,
+                DiagnosisCode = selectedTherapy?.DiagnosisCode
+            };
+
+    }
+}

@@ -1,0 +1,70 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Update Appraisal Needed
+    </div>
+    <div class="panel-body">
+            <div class="row">
+
+                <div class="col-md-9">
+                     @foreach (var description in descriptionTxList)
+                     {
+
+                                <div style="margin-top: 5px">
+                                    <RadzenSwitch  Change="@(args => DescriptionSelected(args,description))"/> @description
+                                </div>
+                    }                </div>
+                     <div>    <span class="alert-dangerMsg" hidden="@(descriptionTxList.Count > 0)">@ApplicationConstants.NoDataMsg</span></div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<string> descriptionTxList = new();
+    List<string> descriptionTxListSelected = new List<string>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+           descriptionTxList = ((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.Select(y => y.HomeownersLine).SelectMany(x => x.ListedDwellings).SelectMany(z=>z.ScheduledItems).Select(k=>k.ScheduledItemDescriptionTx).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (descriptionTxListSelected.Count == 0)
+            return;
+        ((PLHoUmbDwUserEntity)LookupData.UserSelection).UpdateAppraisalNames = new List<string>(descriptionTxListSelected);
+    }
+    public async void DescriptionSelected(bool value, string description)
+    {
+        if (value)
+            descriptionTxListSelected.Add(description.ToString());
+        else
+            descriptionTxListSelected.Remove(description.ToString());
+    }
+}

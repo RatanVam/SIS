@@ -1,0 +1,81 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Requested Copies
+    </div> 
+    <div class="panel-body">
+        @foreach(var reason in reasonsAuditDelay)
+        {<div class="row" style="margin-left:5px">
+                <RadzenSwitch id=@(reason.InspireTag+reason.DocumentDropdownLookupItemId) Change="@(args => OnDenialReasonChanged(args, @reason.InspireTag))" Style="margin-right:5px"/>  @reason.DocumentDropdownLookupItemCode  
+          </div>
+       }
+
+    <div class="row">
+        <div class="col-md-3">
+            Misc Explanation:
+        </div>
+        <div class="col-md-5">
+            <RadzenTextBox id="MiscExplanation" @bind-Value=@auditDelay Style="width: 100%; max-width: 300px;" MaxLength="150" />
+        </div>
+    </div>
+  </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsAuditDelay = new ();
+    List<string> reasons = new();
+
+    string auditDelay = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsAuditDelay = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsAuditDelay), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            ((GCUserEntity)LookupData.UserSelection).AuditDelayLst = new();
+            foreach (var temp in reasonsAuditDelay)
+                ((GCUserEntity)LookupData.UserSelection).AuditDelayLst[temp.InspireTag] = false;
+            foreach (var temp in reasons)
+                ((GCUserEntity)LookupData.UserSelection).AuditDelayLst[temp] = true;
+            ((GCUserEntity)LookupData.UserSelection).MiscExplanation = auditDelay;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

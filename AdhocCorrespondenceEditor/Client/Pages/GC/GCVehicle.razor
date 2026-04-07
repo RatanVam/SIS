@@ -1,0 +1,144 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Vehicle Section
+    </div>
+    <div class="panel-body">
+        <div class="row" hidden="@(!showInsuredVehicle)">
+            <div class="col-md-3">
+                @lblInsuredVehicle
+            </div>
+            <div class="col-md-9">
+                <RadzenDropDown id="VehicleInsured" TValue="Vehicle" class="DropDownSize" Data=@vehicleList TextProperty="Make" 
+                ValueProperty="id" Change=@(args => OnInsuredVehicleChanged(args)) AllowClear=true  Placeholder="--Select--">
+                    <Template>
+                        @($"{context.Year} {context.Make} {context.Model} {context.Vin}")        
+                    </Template>
+                </RadzenDropDown>
+                <span class="alert-dangerMsg" hidden="@(vehicleList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+        <div class="row" hidden="@(!showClaimantVehicle)">
+            <div class="col-md-3">
+                @(makeClaimantVehicleMandatory ? "*" : "") Claimant's Vehicle:
+            </div>
+            <div class="col-md-9">
+                <RadzenDropDown id="VehicleClamant"  TValue="Vehicle" 
+                class=@($"DropDownSize {LookupData.GetTextColorClass(showClaimantVehicle && makeClaimantVehicleMandatory && string.IsNullOrEmpty(selectedClaimantVehicleID), firstRendeValue)}") 
+                Data=@vehicleList TextProperty="Make"
+                                ValueProperty="id" Change=@(args => OnClaimantVehicleChanged(args)) AllowClear=true  Placeholder="--Select--">
+                    <Template>
+                        @($"{context.Year} {context.Make} {context.Model} {context.Vin}")        
+                    </Template>
+                </RadzenDropDown>
+                <span class="alert-dangerMsg" hidden="@(vehicleList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<Vehicle> vehicleList = new();
+
+    string lblInsuredVehicle;
+    bool showClaimantVehicle, showInsuredVehicle, makeClaimantVehicleMandatory;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            lblInsuredVehicle = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(lblInsuredVehicle), LookupData.documentData.documentEntity.DocumentId);
+            showClaimantVehicle = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showClaimantVehicle), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.FalseString.ToUpper() ? false : true;
+            showInsuredVehicle = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(showInsuredVehicle), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            makeClaimantVehicleMandatory = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(makeClaimantVehicleMandatory), LookupData.documentData.documentEntity.DocumentId)?.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            vehicleList = (from row in  ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.InvolvedVehicles
+             orderby  row.Year descending, row.Make descending, row.Model descending
+             select row).ToList();
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string selectedInsuredVehicleID;
+    public async void OnInsuredVehicleChanged(object myArgs)
+    {
+        try
+        {
+            selectedInsuredVehicleID= (myArgs == null)? string.Empty:myArgs.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    string selectedClaimantVehicleID;
+    public async void OnClaimantVehicleChanged(object myArgs)
+    {
+        try
+        {
+            selectedClaimantVehicleID= (myArgs == null)? string.Empty:myArgs.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (showClaimantVehicle && makeClaimantVehicleMandatory && string.IsNullOrEmpty(selectedClaimantVehicleID))
+        {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+        }
+        var selectedVehicle = vehicleList.Where(x => x.id.ToString() == selectedInsuredVehicleID).FirstOrDefault();
+
+        var vehicle = ((GCUserEntity)LookupData.UserSelection).Vehicle;
+
+        if (selectedVehicle != null)
+            ((GCUserEntity)LookupData.UserSelection).Vehicle = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCVehicle
+                {
+                    Make = selectedVehicle?.Make,
+                    Model = selectedVehicle?.Model,
+                    VIN = selectedVehicle?.Vin,
+                    Year = selectedVehicle?.Year
+                };
+        selectedVehicle = vehicleList.Where(x => x.id.ToString() == selectedClaimantVehicleID).FirstOrDefault();
+        if (selectedVehicle != null)
+            ((GCUserEntity)LookupData.UserSelection).VehicleClaimant = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCVehicle
+                {
+                    Make = selectedVehicle?.Make,
+                    Model = selectedVehicle?.Model,
+                    VIN = selectedVehicle?.Vin,
+                    Year = selectedVehicle?.Year
+                };
+    }
+
+}

@@ -1,0 +1,96 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Check Amount(s)
+    </div>
+
+    <div class="panel-body">
+              @foreach (var obj in amountDetails)
+      {
+            <div class="row">
+                <div class="col-md-3">
+                   @($"Check Amount {obj.Index}:")
+                </div>
+                <div class="col-md-6">
+                     $<RadzenTextBox class="@LookupData.GetTextColorClass(obj.Amount, firstRendeValue || obj.Index>1 || amountDetails.Where(x=> !string.IsNullOrEmpty(x.Amount)).Select(x=>x.Amount).Count()>0)" @bind-Value=@obj.Amount Placeholder="####.##" Style="width: 100%; max-width: 400px;" />
+                </div>
+
+            </div>
+    }
+
+    </div>        
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<AmountsAdded> amountDetails = new List<AmountsAdded>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AddNewCCSection();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        if (amountDetails.Count > 0)
+            userSelection.CheckAmount =  amountDetails.Where(x=> !string.IsNullOrEmpty(x.Amount)).Select(x=>x.Amount).ToList();
+        if(userSelection.CheckAmount.Count==0)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void AddNewCCSection()
+    {
+        for(int i=0;i<6;i++)
+        {
+            amountDetails.Add(new AmountsAdded(i+1));
+        }
+        StateHasChanged();
+    }
+
+    public class AmountsAdded
+    {
+        public AmountsAdded(int index)
+        {
+            Index = index;
+        }
+        public int Index { set; get; }
+        public string Amount { set; get; }
+    }
+
+}

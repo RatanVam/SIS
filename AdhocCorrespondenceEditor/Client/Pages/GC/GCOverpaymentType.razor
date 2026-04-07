@@ -1,0 +1,186 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Overpayment Information
+    </div> 
+    <div class="panel-body">
+          <div class="row">
+                <div class="col-md-4">
+                   * Overpayment Type:
+                </div>
+                <div class="col-md-4">
+                    <RadzenDropDown id="OverpaymentType" class="@LookupData.GetTextColorClass(reasonDetails, firstRendeValue)"   TValue="string" Data=@typeOverpaymentGC Change=@(args => OnReasonChanged(args))  
+                        AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 300px;">
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+          </div>
+          @{
+              int i =1;
+       foreach (var obj in checkDetails)
+        {
+                <div class="row">
+                    <div class="col-md-4">
+                        Check Number:
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenTextBox id="CheckNumber" class="DropDownSize300" Name="ReferenceNumber" @bind-Value=@obj.Number  MaxLength="75" />
+                    </div>
+                </div>
+                            <div class="row">
+                    <div class="col-md-4">
+                       Check Date:
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenDatePicker id=@($"CheckDate{i++}") class="DropDownSize300" @bind-Value=@obj.Date DateFormat="MM/dd/yyyy" Placeholder="MM/DD/YYYY"/>
+                    </div>
+                </div>
+                            <div class="row">
+                    <div class="col-md-4">
+                        Check Amount:
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenNumeric id="CheckAmount"  class="DropDownSize300" @bind-Value=@obj.Amount Placeholder="###.##" MaxLength="50"/>
+                    </div>
+                </div>
+                            <div class="row">
+                    <div class="col-md-4">
+                       Date of Service:
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenDatePicker id=@($"CheckDOS{i++}") class="DropDownSize300"  @bind-Value=@obj.DateOfService DateFormat="MM/dd/yyyy" Placeholder="MM/DD/YYYY"/>
+                    </div>
+                </div>
+                            <div class="row">
+                    <div class="col-md-4">
+                        Check Overpayment:
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenNumeric id="CheckOverpay" class="DropDownSize300" @bind-Value=@obj.Overpayment Placeholder="###.##" MaxLength="50"/>
+                    </div>
+                </div>
+
+                <hr Style="margin-top:3px"/>
+        }
+        }
+            <div class="row col-md-12" hidden="@(isSingle || checkDetails?.Count ==0)">
+                <RadzenButton id="OverpaymentAdd" class="AddRemoveButtons" Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" />
+                <RadzenButton id="OverpaymentRemove" class="AddRemoveButtons" Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+            </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    List<DocumentDropdownLookupDataEntity>  typeOverpaymentGC = new ();
+    List<Check> checkDetails = new List<Check>();
+    bool isSingle = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", string.Empty);
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        typeOverpaymentGC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(typeOverpaymentGC), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(reasonDetails))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+            var userSelection = ((GCUserEntity)LookupData.UserSelection).OverPayCheck = new();
+            ((GCUserEntity)LookupData.UserSelection).PaymentType = reasonDetails;
+            foreach (var payment in checkDetails)
+            {
+                if (userSelection.Count > 0 && isSingle)
+                    return;
+                userSelection.Add(new OverPayCheck
+                    {
+                        Number = payment.Number,
+                        Date = payment.Date,
+                        Amount = payment.Amount.HasValue ? payment.Amount.Value.ToString() : string.Empty,
+                        DateOfService = payment.DateOfService,
+                        Overpayment = payment.Overpayment.HasValue ? payment.Overpayment.Value.ToString() : string.Empty,
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    string reasonDetails;
+
+    void OnReasonChanged(object myArgs)
+    {
+        reasonDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+
+        if (string.IsNullOrEmpty(reasonDetails))
+        {
+            checkDetails.Clear();
+            isSingle = true;
+        }
+        else
+        {
+            isSingle = ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemAdditionalValue.ToUpper() == bool.TrueString.ToUpper() ? true : false;
+            if (checkDetails.Count == 0)
+                AddNewCCSection();
+        }
+        StateHasChanged();
+
+    }
+
+    int indexCount = 0;
+    void AddNewCCSection()
+    {
+        checkDetails.Insert(indexCount, new Check());
+        indexCount = indexCount + 1;
+        StateHasChanged();
+    }
+
+    void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            checkDetails.RemoveAt(indexCount);
+        }
+        StateHasChanged();
+    }
+
+    public class Check
+    {
+        public string Number { get; set; }
+        public DateTime? Date { get; set; }
+        public double? Amount { get; set; }
+        public DateTime? DateOfService { get; set; }
+        public double? Overpayment { get; set; }
+    }
+}

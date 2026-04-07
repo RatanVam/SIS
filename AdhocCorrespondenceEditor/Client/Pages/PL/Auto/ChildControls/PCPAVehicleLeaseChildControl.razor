@@ -1,0 +1,139 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row" style="background-color:lightgray">
+  <div class="col-md-8">Lease Company</div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        Name:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@name MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        Address Line 1:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.Line1Tx MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        Address Line 2:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.Line2Tx MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        Address Line 3:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.Line3Tx MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        City:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.Municipality MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        State:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.CountrySubdivision MaxLength="150"/>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        Zip:
+    </div>
+    <div class="col-md-8">
+         <RadzenTextBox class="DropDownSize" @bind-Value=@address.PostalCd MaxLength="150"/>
+    </div>
+</div>
+<br />
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string VehicleId { get; set; }
+
+    AdhocCorrespondenceEditor.Client.ControlClass.Address address = new();
+    string name;
+     string vehicleDetailID;
+   protected override async Task OnInitializedAsync()
+    {
+        vehicleDetailID = VehicleId;
+        var partyDetails = ((PLAutoSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => 
+            x.PersonalAutoLine.VehicleCoverageDetails.Where(y => y.Vehicle.VehicleId==vehicleDetailID&& y.OwnershipTypeCd.ToUpper() == ApplicationConstants.Leased.ToUpper())).
+            SelectMany(z => z.AssociatedParties.Where(x => x.PartyRoles.Contains(ApplicationConstants.Lessor) && x.PartyTypeCd.ToUpper() == ApplicationConstants.Organization.ToUpper()));
+
+        if (partyDetails.Count()>0)
+        {
+            name = partyDetails.FirstOrDefault()?.Organization?.OrganizationNm;
+            var addressDetails = partyDetails.SelectMany(z => z.Organization.Addresses.Where(x => x.AddressUseCd.ToUpper() == ApplicationConstants.Address_Mailing.ToUpper())).FirstOrDefault();
+            PartyAddress partyAddress;
+            if (addressDetails == null)
+                partyAddress = partyDetails.SelectMany(z => z.Organization.Addresses.Where(x => x.PrimaryAddressIn.ToUpper() == bool.TrueString.ToUpper())).FirstOrDefault();
+            else
+                partyAddress = addressDetails;
+
+            address = new ControlClass.Address
+                {
+                    Line1Tx = partyAddress?.Address?.Line1Tx,
+                    Line2Tx = partyAddress?.Address?.Line2Tx,
+                    Line3Tx = partyAddress?.Address?.Line3Tx,
+                    Municipality = ApplicationClassUtility.GetMunicipalityByType(ApplicationConstants.CITY, partyAddress?.Address),
+                    CountrySubdivision = partyAddress?.Address.CountrySubdivision?.CountrySubdivisionNm,
+                    PostalCd = partyAddress?.Address?.PostalCd
+                };
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (userSelection.VehicleDiscriptions == null) userSelection.VehicleDiscriptions = new();
+
+        if (userSelection.VehicleDiscriptions.Where(x => x.VehicleId == vehicleDetailID).FirstOrDefault() == null)
+            userSelection.VehicleDiscriptions.Add(new VehicleDiscription
+                {
+                    VehicleId = vehicleDetailID
+                });
+        var vehicleObj = userSelection.VehicleDiscriptions.Where(x => x.VehicleId == vehicleDetailID).FirstOrDefault();
+
+        vehicleObj.LeaseCoName = name?.Trim();
+        vehicleObj.LeaseCpyAddr1 = address.Line1Tx?.Trim();
+        vehicleObj.LeaseCpyAddr2 = address.Line2Tx?.Trim();
+        vehicleObj.LeaseCpyAddr3 = address.Line3Tx?.Trim();
+        vehicleObj.LeaseCpyCity = address.Municipality?.Trim();
+        vehicleObj.LeaseCpyState = address.CountrySubdivision?.Trim();
+        vehicleObj.LeaseCpyZip = address.PostalCd?.Trim();
+
+    }
+}

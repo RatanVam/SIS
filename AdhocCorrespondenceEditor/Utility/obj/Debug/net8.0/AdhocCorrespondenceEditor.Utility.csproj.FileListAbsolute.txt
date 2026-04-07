@@ -1,0 +1,15 @@
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\bin\Debug\net8.0\AdhocCorrespondenceEditor.Utility.deps.json
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\bin\Debug\net8.0\AdhocCorrespondenceEditor.Utility.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\bin\Debug\net8.0\AdhocCorrespondenceEditor.Utility.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\bin\Debug\net8.0\AdhocCorrespondenceEditor.Shared.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\bin\Debug\net8.0\AdhocCorrespondenceEditor.Shared.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.csproj.AssemblyReference.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.AssemblyInfoInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.AssemblyInfo.cs
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.csproj.CoreCompileInputs.cache
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCor.4DF5A1FA.Up2Date
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\refint\AdhocCorrespondenceEditor.Utility.dll
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\AdhocCorrespondenceEditor.Utility.pdb
+C:\Users\562371\source\repos\Ent.AdhocDocumentUtility\ACE\ACEEnh\AdhocCorrespondenceEditor\Utility\obj\Debug\net8.0\ref\AdhocCorrespondenceEditor.Utility.dll

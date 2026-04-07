@@ -1,0 +1,83 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.Common
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Denial Reason
+    </div>
+    <div class="panel-body">
+
+        <div class="row">
+            <div class="col-md-3">
+                * Denial Reason:
+            </div>
+            <div class="col-md-9">
+                <RadzenDropDown id="denialReasonId"  TValue="DenialReasonEnitity"  class="@LookupData.GetTextColorClass(reason, firstRendeValue)" Data=@denialReasons TextProperty="DenialReasonValue" ValueProperty="DenialReasonKey" Change=@(args => OnDenialReasonChanged(args)) AllowClear=true Placeholder="--Select--"   Style="width: 100%; max-width: 400px;" />
+                <span class="alert-dangerMsg" hidden="@(denialReasons.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DenialReasonEnitity> denialReasons = new();
+    string reason;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        var denialReq = new DenialReasonRequest()
+        {
+            LobName = LookupData.LOBName,
+            DocumentId = LookupData.documentData.documentEntity.DocumentId,
+            PolicyState = LookupData.State,
+            PolicyForm = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.ClaimPolicy.PolicyForm,
+            PolicyType = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.ClaimPolicy.Type
+        };
+        var response = await Http.PostAsJsonAsync($"{ApplicationConstants.UrlLookupDenialReasons}", denialReq);
+        denialReasons = (await response.Content.ReadFromJsonAsync<List<DenialReasonEnitity>>())?.ToList();
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnDenialReasonChanged(object myArgs)
+    {
+        reason = myArgs?.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(reason))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+            var userSelection = ((GCUserEntity)LookupData.UserSelection);
+            userSelection.DenialReason = reason;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+}

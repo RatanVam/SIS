@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
+	  <PackageReference Include="NJM.DotNetLibrary.Common" Version="5.0.0" />
+	  <PackageReference Include="NJM.DotNetLibrary.Logging" Version="5.0.0" />
+	  <PackageReference Include="NJM.DotNetLibrary.SiteMinder" Version="5.0.0" />
+    <PackageReference Include="NJM.Identity.Core" Version="1.0.1" />
+	  <PackageReference Include="System.Net.Http.Json" Version="6.0.0" />
+    <PackageReference Include="System.ServiceModel.Duplex" Version="4.8.*" />
+    <PackageReference Include="System.ServiceModel.Federation" Version="4.8.*" />
+    <PackageReference Include="System.ServiceModel.Http" Version="6.0.0" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.8.*" />
+    <PackageReference Include="System.ServiceModel.Security" Version="4.8.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\AdhocCorrespondenceEditor.Client.csproj" />
+    <ProjectReference Include="..\Service\AdhocCorrespondenceEditor.Service.csproj" />
+    <ProjectReference Include="..\Shared\AdhocCorrespondenceEditor.Shared.csproj" />
+    <ProjectReference Include="..\Utility\AdhocCorrespondenceEditor.Utility.csproj" />
+  </ItemGroup>
+
+
+</Project>

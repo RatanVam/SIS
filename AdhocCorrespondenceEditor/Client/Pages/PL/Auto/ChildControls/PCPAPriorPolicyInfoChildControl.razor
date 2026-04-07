@@ -1,0 +1,67 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">
+       * Prior Policy Number
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(priorPolicyNumber, firstRendeValue)"  @bind-Value=@priorPolicyNumber MaxLength="150" Style="width: 100%; max-width: 300px;"/>
+    </div>
+    </div>
+    <div class="row">
+    <div class="col-md-3">
+       * Prior Balance ($)
+    </div>
+    <div class="col-md-4">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(priorBalance, firstRendeValue)"  @bind-Value=@priorBalance  MaxLength="150" Style="width: 100%; max-width: 300px;"/>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    string priorPolicyNumber, priorBalance= string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(priorPolicyNumber?.Trim()) || string.IsNullOrEmpty(priorBalance?.Trim()))
+        {
+            LookupData.errorDetails.IsInValid = isValidate;
+            return;
+        }
+
+            ((PLPAUserEntity)LookupData.UserSelection).PolicyNumber = priorPolicyNumber?.Trim();
+            ((PLPAUserEntity)LookupData.UserSelection).PiiorBalance = priorBalance?.Trim();
+    }
+ 
+
+
+}

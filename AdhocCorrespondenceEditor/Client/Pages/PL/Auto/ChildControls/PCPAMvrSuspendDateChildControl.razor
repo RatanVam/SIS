@@ -1,0 +1,59 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="row">
+    <div class="col-md-3">
+        * License MVR Suspended Date:
+    </div>
+    <div class="col-md-4">
+         <RadzenDatePicker @bind-Value=@eventDate class="@LookupData.GetTextColorClassCalander((eventDate.HasValue)?"1":string.Empty, firstRendeValue)" 
+                DateFormat="yyyy-MM-dd" Change=@(args => OnDateChange(args))  Style="width: 100%; max-width: 400px;" ShowCalendarWeek/>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+
+    DateTime? eventDate;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (eventDate == null)
+            LookupData.errorDetails.IsInValid = isValidate;
+        else
+            //((PLPAUserEntity)LookupData.UserSelection).LIC_MVR_SuspendDate = eventDate.Value;
+            ((PLPAUserEntity)LookupData.UserSelection).LicenseMVRSuspendedDate = eventDate.Value;
+    }
+
+    void OnDateChange(object myArgs)
+    {
+        eventDate = myArgs == null ? null : (DateTime)myArgs;
+    }
+
+}

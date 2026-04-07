@@ -1,0 +1,156 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Legal Details
+    </div>
+    <div class="panel-body">
+             
+        <div class="row">
+            <div class="col-md-3">
+                Court Address:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtAddress MaxLength="125" /> 
+            </div>
+        </div>
+             
+        <div class="row">
+            <div class="col-md-3">
+                Court City:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtCity MaxLength="125" /> 
+            </div>
+        </div>        <div class="row">
+            <div class="col-md-3">
+                Court Zip Code:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtZipCode MaxLength="10" /> 
+            </div>
+        </div>        <div class="row" hidden ="@(!courtResponse)">
+            <div class="col-md-3">
+                Court Date:
+            </div>
+            <div class="col-md-6">
+               <RadzenDatePicker class="DropDownSize" @bind-Value=@courtDate  DateFormat="MM-dd-yyyy" Placeholder="MM-DD-YYYY" /> 
+            </div>
+        </div>        <div class="row">
+            <div class="col-md-3">
+                Hearing Time:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtHearingTime MaxLength="10" Placeholder="xx:xx am/pm"/> 
+            </div>
+        </div>        <div class="row" hidden ="@(!courtResponse)">
+            <div class="col-md-3">
+                Response Time:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtResponseTime MaxLength="10" Placeholder="xx:xx am/pm"/> 
+            </div>
+        </div>        <div class="row" hidden ="@(!courtResponse)">
+            <div class="col-md-3">
+                Response Date:
+            </div>
+            <div class="col-md-6">
+               <RadzenDatePicker class="DropDownSize" @bind-Value=@courtResponseDate  DateFormat="MM-dd-yyyy" Placeholder="MM-DD-YYYY" /> 
+            </div>
+        </div>        <div class="row">
+            <div class="col-md-3">
+                Judge Name:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtJudgeName MaxLength="125" /> 
+            </div>
+        </div>        <div class="row">
+            <div class="col-md-3">
+                Hearing Month:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtHearingMonth MaxLength="10" Placeholder="Fill Month"/> 
+            </div>
+        </div>        <div class="row">
+            <div class="col-md-3">
+                Hearing Day:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courHearingDay MaxLength="2" Placeholder="##"/>  
+            </div>
+        </div>        <div class="row" >
+            <div class="col-md-3">
+                Hearing Year:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtHearingYear MaxLength="4" Placeholder="####"/> 
+            </div>
+        </div>        <div class="row" hidden ="@(!courtDay)">
+            <div class="col-md-3">
+                Court Day of the Week:
+            </div>
+            <div class="col-md-6">
+               <RadzenTextBox class="DropDownSize" @bind-Value=@courtCourtDayWeek MaxLength="10" Placeholder="Full Day"/> 
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string courtAddress, courtCity, courtZipCode, courtHearingTime, courtResponseTime
+    ,courtJudgeName, courtHearingMonth, courHearingDay, courtHearingYear, courtCourtDayWeek;
+    DateTime? courtDate, courtResponseDate;
+
+    bool courtResponse, courtDay;
+    protected override async Task OnInitializedAsync()
+    {
+       courtResponse = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(courtResponse), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+       courtDay = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(courtDay), LookupData.documentData.documentEntity.DocumentId).ToUpper() == bool.TrueString.ToUpper() ? true : false;
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        userSelection.LegalInfo = new LegalDetails{
+            CourtAddress =courtAddress,
+            CourtCity =courtCity,
+            CourtZipCode = courtZipCode,
+            CourtHearingTime =courtHearingTime,
+            CourtResponseTime =courtResponseTime,
+            CourtJudgeName =courtJudgeName,
+            CourtHearingMonth =courtHearingMonth,
+            CourHearingDay =courHearingDay,
+            CourtHearingYear =courtHearingYear,
+            CourtCourtDayWeek=courtCourtDayWeek,
+            CourtDate =courtDate,
+            CourtResponseDate=courtResponseDate
+        };
+
+    }
+
+}

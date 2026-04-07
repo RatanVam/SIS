@@ -1,0 +1,98 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@inject HttpClient Http
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Document Type
+    </div>
+    <div class="panel-body">
+            <div class="row" hidden="@(docTypeList.Count==0)">
+                <div class="col-md-3">
+                   * Document Type
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown  class="@LookupData.GetTextColorClass(docType, firstRendeValue)" TValue="string" Data=@docTypeList Change=@(args => OnDocTypeChanged(args)) AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;">
+            <Template>    @($"{context.DocumentDropdownLookupItemCode}") </Template>
+    </RadzenDropDown>                    <span class="alert-dangerMsg" hidden="@(docTypeList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" hidden="@(categiries.Count==0)">
+                <div class="col-md-3">
+                   * Document Type:
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown  class="@LookupData.GetTextColorClass(docType, firstRendeValue)" TValue="string" Data=@categiries Change=@(args => OnDocTypeCategoryChanged(args)) AllowClear=true  Placeholder="--Select--" Style="width: 100%; max-width: 400px;"/>
+                   <span class="alert-dangerMsg" hidden="@(categiries.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<DocumentDropdownLookupDataEntity> docTypeList = new();
+    List<string> categiries = new List<string>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var listName = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(docTypeList), LookupData.documentData.documentEntity.DocumentId);
+            if (!string.IsNullOrEmpty(listName))
+                docTypeList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{listName}/"));
+            if (docTypeList?.Count == 0)
+            {
+                List<string> excludeCategorys = new List<string>();
+                excludeCategorys = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(excludeCategorys), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+                //var categiries = LookupData.categoryList.ExceptBy(excludeCategorys, (c) => c.CategoryFriendlyName)?.Select(x => x.CategoryFriendlyName)?.ToList();
+                 categiries = LookupData.categoryList.Where(x=> !excludeCategorys.Contains(x.CategoryFriendlyName))?.Select(x=>x.CategoryFriendlyName)?.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    string docType;
+    public async void OnDocTypeChanged(object myArgs)
+    {
+        docType = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+    }
+    public async void OnDocTypeCategoryChanged(object myArgs)
+    {
+        docType = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(docType))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        ((WCCUserEntity)LookupData.UserSelection).DocType = docType;
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+}

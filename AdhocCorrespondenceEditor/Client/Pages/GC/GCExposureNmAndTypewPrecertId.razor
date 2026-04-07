@@ -1,0 +1,316 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using System.Text.RegularExpressions
+@using System.Reflection
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Exposure Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Exposure Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="ExposureName" TValue="PartyAddressUI" class=@($"{LookupData.GetTextColorClass(partyID, firstRendeValue)} DropDownSize") Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" 
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-3">
+                  * Exposure Type:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown id="ExposureType" @ref="childComponent" Value=@partyExposureID class=@($"{LookupData.GetTextColorClass(partyExposureID == null, firstRendeValue)} DropDownSize") TValue="AdhocCorrespondenceEditor.Shared.GC.Exposure" Data=@partyExposure TextProperty="ExposureType" 
+                   ValueProperty="id"  Change=@(args => OnExposureChanged(args)) AllowClear=true  Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyExposure.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-3">
+                  * Precert ID:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown id="PrecertID" @ref="childComponentPrecert" Value=@precertificationID  TValue="AdhocCorrespondenceEditor.Shared.GC.Precertification" 
+                   class=@($"{LookupData.GetTextColorClass(precertificationID, firstRendeValue)} DropDownSize") Data=@precertification TextProperty="PrecertificationId" 
+                   ValueProperty="PrecertificationId"  Change=@(args => OnPrecertIDChanged(args)) AllowClear=true  Placeholder="--Select--"/>
+                    <span class="alert-dangerMsg" hidden="@(precertification.Count > 0 || !partyExposureID.HasValue)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+        @foreach (var objDerermination in determinations)
+        {
+            <div style="border: 2px solid lightgray; margin:5px; padding:5px">
+                <div class="row" >
+                    <div class="col-md-3">
+                        Determination Code:
+                    </div>
+                    <div class="col-md-3">
+                        <RadzenTextBox id=@("Determination"+objDerermination.id) @bind-Value=@objDerermination.DeterminationId Disabled=true  Style="width: 100%; max-width: 300px;"/> 
+                    </div>
+                </div>
+                @foreach (var objProcedure in objDerermination.Procedures)
+                {
+
+                    <div class="row" >
+                        <div class="col-md-3">
+                            Precert Start Code:
+                        </div>
+                        <div class="col-md-3">
+                            <RadzenTextBox id=@("PrecertStart"+objDerermination.id+objProcedure.id) @bind-Value=@objProcedure.StartCode Disabled=@objProcedure.IsStartEndCode MaxLength="150"  Style="width: 100%; max-width: 300px;"/> 
+                        </div>
+                        <div class="col-md-2">
+                            Precert End Code:
+                        </div>
+                        <div class="col-md-3">
+                            <RadzenTextBox id=@("PrecertEnd"+objDerermination.id+objProcedure.id) @bind-Value=@objProcedure.EndCode Disabled=@objProcedure.IsStartEndCode MaxLength="150"  Style="width: 100%; max-width: 300px;"/> 
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>> components = new List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>>();
+
+    RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification> childComponentPrecert { set => componentsPrecert.Add(value); }
+    List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification>> componentsPrecert = new List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification>>();
+
+
+    List<PartyAddressUI> partyList = new();
+    List<Exposure> partyExposure = new List<Exposure>();
+    List<Precertification> precertification = new List<Precertification>();
+    List<DeterminationLocal> determinations = new List<DeterminationLocal>();
+    List<ProcedureLocal> procedures = new List<ProcedureLocal>();
+
+    List<PartyAddressUI> partyFullList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> claimantRoles = new List<string>();
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(claimantRoles.Contains))?.OrderBy(x => x.DisplayName)?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    string partyID, precertificationID, determinationID, procedureID;
+    int? partyExposureID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                precertificationID = partyID = string.Empty;
+                partyExposure = new List<Exposure>();
+                partyExposureID = null;
+
+                precertification = new List<Precertification>();
+                precertificationID = string.Empty;
+                determinations = new List<DeterminationLocal>();
+            }
+            else
+            {
+                partyID = myArgs.ToString();
+                partyExposure = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.InvolvedParties.Where(x => x.id.ToString() == partyID).SelectMany(y => y.Exposures)?.OrderBy(y => y.ExposureType)?.ToList();
+                partyExposureID = partyExposure?.Count == 1 ? partyExposure?.FirstOrDefault()?.id : null;
+
+
+            }
+            if (!partyExposureID.HasValue)
+            {
+                foreach (var cntl in components)
+                    cntl.Reset();
+            }
+            else
+            {
+                OnExposureChanged(partyExposureID);
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnExposureChanged(object myArgs)
+    {
+        partyExposureID = myArgs == null ? null : (int)myArgs;
+        if (myArgs == null)
+        {
+            precertification = new List<Precertification>();
+            precertificationID = string.Empty;
+            determinations = new List<DeterminationLocal>();
+        }
+        else
+        {
+            precertification = partyExposure.Where(x => x.id == partyExposureID).FirstOrDefault()?.Precertifications?.OrderByDescending(y =>int.Parse(y.PrecertificationId))?.ToList();
+            precertificationID = precertification?.Count > 0 ? precertification.FirstOrDefault()?.PrecertificationId : string.Empty;
+       }
+        if (string.IsNullOrEmpty(precertificationID))
+            foreach (var cntl in componentsPrecert)
+                cntl.Reset();
+        else
+            OnPrecertIDChanged(precertificationID);
+
+        StateHasChanged();
+    }
+    public async void OnPrecertIDChanged(object myArgs)
+    {
+        precertificationID = myArgs == null ? string.Empty : myArgs.ToString();
+        var tempListPrecerifications = precertification?.Where(x => x.PrecertificationId.ToString() == precertificationID)?.FirstOrDefault();
+        determinations = tempListPrecerifications?.Determinations?.Select(y =>
+            new DeterminationLocal
+                {
+                    DeterminationId = y.DeterminationId,
+                    IsAppealPresent = y.IsAppealPresent,
+                    TreatmentReason = y.TreatmentReason,
+                    TreatmentStatus = y.TreatmentStatus,
+                    TotalTreatmentsApproved = y.TotalTreatmentsApproved,
+                    id = y.id,
+                    Procedures = y.Procedures.Count() > 0 ? y.Procedures.Select(z => new ProcedureLocal
+                    {
+                        EndCode = z.EndCode,
+                        id = z.id,
+                        StartCode = z.StartCode,
+                        UserDefinedGroup = z.UserDefinedGroup,
+                        IsStartEndCode = !string.IsNullOrEmpty(z.StartCode) || !string.IsNullOrEmpty(z.EndCode)
+                    }).ToList() : (new List<ProcedureLocal>() { new ProcedureLocal() })
+
+                }).ToList();
+        if (determinations == null)
+            determinations = new List<DeterminationLocal>();
+        StateHasChanged();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID) || partyExposureID == null)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        try
+        {
+
+
+            var userSelection = ((GCUserEntity)LookupData.UserSelection);
+            var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+
+            var exposure = partyExposure.Where(x => x.id == partyExposureID).FirstOrDefault();
+            if (selectedParty != null)
+            {
+                userSelection.ExposureDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCExposure
+                    {
+                        Name = selectedParty?.DisplayName,
+                        ClaimentID = selectedParty?.PartyID,
+                        ExposureType = exposure?.ExposureType,
+                        ExposureNumber = exposure?.ExposureNumber,
+                        Represented = exposure?.Represented ?? false,
+                        JurisdictionState=exposure?.ExposureJurisdictionState
+                    };
+            }
+            if (string.IsNullOrEmpty(precertificationID))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+            var precert = precertification?.Where(x => x.PrecertificationId.ToString() == precertificationID)?.FirstOrDefault();
+
+            if (precert == null)
+                return;
+            var precertParty = partyFullList.Where(x => x.PartyID == precert?.Provider?.refId.ToString()).FirstOrDefault();
+            var phoneDetails = precertParty?.ElectronicsDetails?.PhoneFaxDetailList?.Where(x => x.Type == PhoneNumberType.Number.ToString() && x.Category == PhoneNumberCategory.Business.ToString())?.LastOrDefault();
+            userSelection.PrecertDetailsComplete = new PrecertCompleteDetails
+                {
+                    ID = precertificationID,
+                    ProviderSys = precertParty?.DisplayName,
+                    providerPhn = phoneDetails == null ? string.Empty : Utility.PhoneFormate(phoneDetails.AreaCode, phoneDetails.Exchange, phoneDetails.Number),
+                    OBKW = precert.PrecertificationId,
+                    ServiceDate = precert.EndDate,
+                    EndDate = precert.EndDate,
+                    StartDate = precert.StartDate,
+                    TreatmntStatus = precert.Determinations.Count() > 1 ? ApplicationConstants.Multiple : precert.Determinations.Count() == 1 ? precert.Determinations[0].TreatmentStatus : string.Empty,
+                    Determints = determinations.Select(y =>
+                new Determint
+                {
+                    TotalTreatmentsApproved = y.TotalTreatmentsApproved,
+                    TreatmentReason = y.TreatmentReason,
+                    TreatmentStatus = y.TreatmentStatus,
+                    PresentStatus = y.IsAppealPresent,
+                    Code = y.DeterminationId,
+                    Procedures = y.Procedures.Select(z => new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.Procedure
+                    {
+                        StartCode = z.StartCode,
+                        EndCode = z.EndCode,
+                        DeterminationId = y.DeterminationId,
+                        UserDefinedGroup = z.UserDefinedGroup,
+                        PrecertificationId = precert.PrecertificationId
+                    }).ToList()
+                }).ToList()
+                };
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    class DeterminationLocal
+    {
+        public string DeterminationId { get; set; }
+        public bool IsAppealPresent { get; set; }
+        public string TreatmentReason { get; set; }
+        public string TreatmentStatus { get; set; }
+        public int TotalTreatmentsApproved { get; set; }
+        public List<ProcedureLocal> Procedures { get; set; } = new ();
+        public int id { get; set; }
+    }
+
+    public class ProcedureLocal
+    {
+        public string StartCode { get; set; }
+        public string EndCode { get; set; }
+        public string UserDefinedGroup { get; set; }
+        public int id { get; set; }
+        public bool IsStartEndCode { get; set; }
+    }
+
+
+}

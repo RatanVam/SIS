@@ -1,0 +1,75 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Paragraphs
+    </div> 
+    <div class="panel-body">
+
+        @foreach(var reason in reasonsImeParagraph)
+        {
+            <div class="row" hidden = "@(reason.DocumentDropdownLookupItemAdditionalValue !=null && !reasonsIDs.Contains(reason.DocumentDropdownLookupItemAdditionalValue))">
+                <div class="col-md-1" hidden = "@(reason.DocumentDropdownLookupItemAdditionalValue == null)"> @*To have extra space at the begining for child check boxes*@
+                </div>
+                <div class="col-md-6" style="margin-left:5px">
+                    <RadzenSwitch id=@("Paragraphs"+reason.DocumentDropdownLookupItemId) Change="@(args => OnDenialReasonChanged(args, @reason.InspireTag,@reason.DocumentDropdownLookupItemValue))" 
+                       Value="@reasons.Contains(reason.InspireTag)" Style="margin-right:5px"/>  @reason.DocumentDropdownLookupItemCode  
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsImeParagraph = new ();
+    List<string> reasons = new();
+    List<string> reasonsIDs = new();
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsImeParagraph = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsImeParagraph), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((GCUserEntity)LookupData.UserSelection).ImeParagraphs = new List<string>(reasons);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs, string value)
+    {
+        if (isSelected)
+        {
+            reasons.Add(myArgs?.ToString());
+            reasonsIDs.Add(value?.ToString());
+        }
+        else
+        {
+            var array = reasonsImeParagraph.Where(x => x.DocumentDropdownLookupItemAdditionalValue == value).Select(y => y.InspireTag);
+            foreach (var obj in array)
+                reasons.Remove(obj);
+            reasons.Remove(myArgs?.ToString());
+            reasonsIDs.Remove(value?.ToString());
+
+        }
+    }
+}

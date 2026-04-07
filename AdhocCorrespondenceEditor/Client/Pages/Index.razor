@@ -1,0 +1,884 @@
+﻿@page "/"
+@page "/Home"
+
+@using System.Text
+@using System.Xml.Serialization
+@using System.Xml
+@using System.Reflection
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.BC
+@using AdhocCorrespondenceEditor.Shared.CL
+@using AdhocCorrespondenceEditor.Shared.DTO.ACEEntity
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using AdhocCorrespondenceEditor.Shared.PCCA
+@using AdhocCorrespondenceEditor.Shared.PCMulti
+@using AdhocCorrespondenceEditor.Shared.PL
+@using AdhocCorrespondenceEditor.Shared.WCC
+@using AdhocCorrespondenceEditor.Shared.WCU
+@using AdhocCorrespondenceEditor.Shared.PCPA
+
+@inject IJSRuntime JSRuntime;
+@inject HttpClient Http
+@inject NavigationManager navManager
+@inject BlazorDisplaySpinnerHandler spinner
+@inject StateContainer StateContainer
+
+<RadzenTemplateForm TItem="OutputBase">
+
+    <div>
+        <div style="height:25px; background-color:#eeeeee; text-align:left;color:black;font-size:larger;position:fixed;top:62px;z-index:100;width:100%;">
+            <space-between style="float:left;text-align:right;padding-top:4px;padding-left:20px;font-size:14px">@headingDisplay</space-between>
+            <div style="float:right">
+                 <button class="btnOnMenu" type="button" style="text-decoration:underline;" disabled="@displayOptionStatus.IsXMLDisabled" hidden="@(!displayOptionStatus.IsIPXMLDisplay)" @onclick="GetInputXML">Input XML</button>
+                <button class="btnOnMenu" type="button" style="text-decoration:underline;" disabled="@displayOptionStatus.IsXMLDisabled" hidden="@(!displayOptionStatus.IsOPXMLDisplay)" @onclick="GetOutputXML">Output XML</button>
+                  <button class="btnOnMenu" type="button" style="text-decoration:underline;" hidden="@(!appSetting?.ShowSimulator)" @onclick=@(() => navManager.NavigateTo("simulator"))>Simulator</button>
+                  <button class="btnOnMenu" type="button" style="text-decoration:underline;" hidden="@(LOBEntities?.Count == 0)" @onclick=@(() => navManager.NavigateTo("admin"))>Admin</button>
+                <button class="btnOnMenu" type="button" style="text-decoration:underline; padding-right:24px;" @onclick="OpenSearch">Search</button>
+            </div>
+        </div>
+        <br />
+        <div style="top:95px;position:absolute;width:100%;">
+            <div class="mainDiv">
+                <div class="panel-body">
+                    <div class="form-group">
+                        <table style="width:800px;">
+                            <tr>
+                                <td style="width:8%;">
+                                    <label>
+                                        Category
+                                    </label>
+                                </td>
+                                <td style="width:35%">
+                                    <RadzenDropDown class="DropDownSize" id="Category"  TValue="CategoryEntity"  Data=@aceDataCollector.categoryList TextProperty="CategoryFriendlyName" ValueProperty="CategoryId"
+                                                    Change=@(args => OnCategoryChanged(args)) Placeholder="--Select--"   />
+                                </td>
+                                <td style="width:11%;padding-left:20px;">
+                                    <label>
+                                        Document
+                                    </label>
+                                </td>
+                                <td style="width:35%">
+                                    <RadzenDropDown @ref="childComponent" class="DropDownSize" Name="DocumentName" TValue="DocumentEntity"  Data=@aceDataCollector.documentList id="Document" TextProperty="DocumentFriendlyName"
+                                                    ValueProperty="DocumentId" Change=@(args => OnDocumentChanged(args)) Disabled="@(loadingError)"
+                                                    AllowClear=true Placeholder="--Select--"   />
+                                </td>
+                            </tr>
+                        </table>
+                        <div hidden="@hideGetTransaction">
+                            <br />
+                            <table style="width:800px;">
+                                <tr>
+                                    <td style="width:8%;">
+                                        <label>
+                                            Start Date
+                                        </label>
+                                    </td>
+                                    <td style="width:35%">
+                                        <RadzenDatePicker TValue="DateTime" @bind-Value=@startDate Class="w-100" DateFormat="MM/dd/yyyy" Placeholder="MM/dd/yyyy" />
+                                    </td>
+                                    <td style="width:11%;padding-left:20px;">
+                                        <label>
+                                            End Date
+                                        </label>
+                                    </td>
+                                    <td style="width:35%">
+                                        <RadzenDatePicker TValue="DateTime" @bind-Value=@endDate Class="w-100" DateFormat="MM/dd/yyyy" Placeholder="MM/dd/yyyy" />
+                                    </td>
+                                </tr>
+                            </table>
+                            <br />
+                            <div>   <RadzenButton Click=@GetESBData Text="Get transactions" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Secondary" style="margin-right:20px" /></div>
+                        </div>
+                        <div style="padding-top:4px;" hidden="@aceDataCollector.errorDetails.IsError">
+                            <div class="alert-dangerMsg" id="DivAlert"> @aceDataCollector.errorDetails.Error </div>
+                            <div class="alert-dangerMsg" hidden="@aceDataCollector.errorDetails.IsErrorCode" id="DivAlert1"> Error Code:  @aceDataCollector.errorDetails.ErrorCode</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="mainDivNoboder" hidden="@displayOptionStatus.IsPublishDisabled">
+                @foreach (var item in selectedList)
+                {
+                    <div style="padding: 0px 0px 0px 0px;">
+                        <DynamicComponent Type="item" Parameters="@Parameters" />
+                    </div>
+                }
+            </div>
+
+    <div class="mainDivNoboder" style="padding-top:4px;" hidden="@(aceDataCollector.errorDetails.IsError || selectedList.Count ==0)">
+         <div class="alert-dangerMsg" id="DivAlert"> @aceDataCollector.errorDetails.Error </div>
+    </div>
+            <div style="padding-top:4px;text-align:center">
+
+                <RadzenButton Click=@SendData Text="Publish" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Secondary" Disabled="@displayOptionStatus.IsPublishDisabled" style="margin-right:20px;margin-bottom:50px;" />
+                <RadzenButton Click=@OpenSample Text="Preview" ButtonStyle="ButtonStyle.Secondary" Disabled="@displayOptionStatus.IsPublishDisabled" style="margin-right:20px" />
+            </div>
+        </div>
+        <div style="height:20px; background-color:#eeeeee; text-align:left;color:grey;font-size:14px;position:fixed;bottom:0px;z-index:100;width:100%"> &copy; 2023 New Jersey Manufacturers Insurance Group</div>
+    </div>
+    <br />
+    <hr />
+    <br />
+</RadzenTemplateForm>
+
+
+@code
+{
+    [CascadingParameter]
+    public EventCallback<string> notifyUser { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    AceDataCollector aceDataCollector;
+    RadzenDropDown<DocumentEntity> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<DocumentEntity>> components = new List<RadzenDropDown<DocumentEntity>>();
+    List<Type> selectedList = new();
+    public DisplayOptionStatus displayOptionStatus;
+    public InputQueryParameters inputQueryParameters;
+    LoggerUtility loggerUtility;
+    string urlInteractive = string.Empty;
+    bool loadingError = true;
+    string headingDisplay = string.Empty;
+    DateTime startDate, endDate;
+    bool hideGetTransaction = true;
+    bool savedSourceSystemData = false;
+    SourceSystemBaseEntity tempSourceSystemEntity;
+    bool saveDocDetailsInDB = false;
+    private int? CategoryId { get; set; } = null;
+    private int? DocumentId { get; set; } = null;
+    AppSettingEntity appSetting { get; set; }
+    List<LOBEntity> LOBEntities;
+
+    protected override async Task OnInitializedAsync()
+    {
+        startDate = endDate = DateTime.Now.Date;
+        inputQueryParameters = new InputQueryParameters(navManager.Uri);
+        aceDataCollector = new AceDataCollector(inputQueryParameters.LOB, inputQueryParameters.State);
+        displayOptionStatus = new DisplayOptionStatus(inputQueryParameters);
+        await GetAppSettings();
+        loggerUtility = new LoggerUtility(navManager.BaseUri, displayOptionStatus.DisplayText);
+        headingDisplay = displayOptionStatus.DisplayText;
+        loggerUtility.LogInfoAsync(LogType.Information, "URL Details: " + navManager.Uri);
+        await GetUserData(); 
+        var response= await Http.PostAsJsonAsync<string>($"{ApplicationConstants.UrlReferenceDataLob}", inputQueryParameters.UserDetails.UserRoles ?? string.Empty);
+        LOBEntities= (await response.Content.ReadFromJsonAsync<List<LOBEntity>>())?.OrderBy(y => y.LOBName)?.ToList();
+        if (string.IsNullOrEmpty(inputQueryParameters.LOB)) return;
+        if (inputQueryParameters.Mode.Equals(ApplicationConstants.Mode_Simulator) && appSetting.ShowSimulator)
+        {
+            if (StateContainer?.XMLValue == null)
+            {
+                aceDataCollector.errorDetails.Error = "ESB Data is Empty.";
+                loggerUtility.LogInfoAsync(LogType.Error, "ESB Data is Empty.");
+                loadingError = true;
+                return;
+            }
+            aceDataCollector.SourceSystemEntity = StateContainer.XMLValue;
+            StateContainer.XMLValue = null;
+            loadingError = false;
+        }
+        else
+            await GetSourceSystemData();
+        GetCategory();
+        GetPrinterData();
+        GetPolicyLookupData();
+        GetConfigurationData();
+        GetGenericLookupData();
+        GetRuleData();
+        GetRuleLookupData();
+        Parameters.Add(ApplicationConstants.LookupData, aceDataCollector);
+        Parameters.Add("Logger", loggerUtility);
+    }
+
+    async Task GetAppSettings()
+    {
+        appSetting = await Http.GetFromJsonAsync<AppSettingEntity>(ApplicationConstants.UrlLookupGetAppSettings);
+        if (appSetting != null)
+        {
+            displayOptionStatus.IsIPXMLDisplay = displayOptionStatus.IsOPXMLDisplay = appSetting.ShowXMLs;
+            saveDocDetailsInDB = appSetting.LogDocumentsInDB;
+        }
+    }
+
+    async void GetCategory()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync<string>($"{ApplicationConstants.UrlReferenceDataCategory}{inputQueryParameters.LOB}", inputQueryParameters.UserDetails.UserRoles);
+            aceDataCollector.categoryList = (await response.Content.ReadFromJsonAsync<List<CategoryEntity>>())?.OrderBy(y => y.CategoryFriendlyName)?.ToList();
+            loggerUtility.LogInfoAsync(LogType.Information, $"category count : {aceDataCollector.categoryList?.Count}"); // TempLog
+
+            if (aceDataCollector.categoryList == null || aceDataCollector.categoryList.Count == 0)
+            {
+                loggerUtility.LogInfoAsync(LogType.Warning, $"Category List Empty");
+                aceDataCollector.errorDetails.Error = ApplicationConstants.ADgroupspermissionsError;
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+            BuiltErrorMsg(ApplicationConstants.ADgroupspermissionsError);
+            loadingError = true;
+        }
+    }
+
+    async void GetPrinterData()
+    {
+        try
+        {
+            aceDataCollector.printerLookupEntities = (await Http.GetFromJsonAsync<List<PrinterLookupEntity>>($"{ApplicationConstants.UrlLookupPrinter}{inputQueryParameters.LOB}/"))?.OrderBy(x => x.PrinterName)?.ToList();
+            if (aceDataCollector.printerLookupEntities == null|| aceDataCollector.printerLookupEntities.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "No Printers configured";
+                loggerUtility.LogInfoAsync(LogType.Warning, aceDataCollector.errorDetails.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("No Printers configured");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        StateHasChanged();
+    }
+    async void GetRuleData()
+    {
+        try
+        {
+            aceDataCollector.ruleEntity = (await Http.GetFromJsonAsync<List<RuleEntity>>(ApplicationConstants.UrlLookupRule))?.ToList();
+            if (aceDataCollector.ruleEntity == null || aceDataCollector.ruleEntity.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "No Rules configured";
+                loggerUtility.LogInfoAsync(LogType.Warning, aceDataCollector.errorDetails.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("No Rules configured");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        StateHasChanged();
+    }
+
+    async void GetRuleLookupData()
+    {
+        try
+        {
+            aceDataCollector.ruleLookupEntity = (await Http.GetFromJsonAsync<List<RuleLookupEntity>>(ApplicationConstants.UrlLookupRuleLookup))?.ToList();
+            if (aceDataCollector.ruleLookupEntity == null || aceDataCollector.ruleLookupEntity.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "No Rules Lookup data configured";
+                loggerUtility.LogInfoAsync(LogType.Warning, aceDataCollector.errorDetails.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("No Rule Lookup data configured");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        StateHasChanged();
+    }
+
+    async void GetPolicyLookupData()
+    {
+        try
+        {
+            aceDataCollector.policyLookupEntity = (await Http.GetFromJsonAsync<List<PolicyLookupEntity>>(ApplicationConstants.UrlLookupPolicyLookup))?.ToList();
+            if (aceDataCollector.policyLookupEntity == null || aceDataCollector.policyLookupEntity.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "Policy Lookup Error " + inputQueryParameters.LOB;
+                loggerUtility.LogInfoAsync(LogType.Warning, "Policy Lookup Data Null");
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("Policy Lookup Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    async void GetGenericLookupData()
+    {
+        try
+        {
+            aceDataCollector.genericLookupEntity = (await Http.GetFromJsonAsync<List<GenericLookupEntity>>(ApplicationConstants.UrlLookupGenericLookup))?.ToList();
+            if (aceDataCollector.genericLookupEntity == null || aceDataCollector.genericLookupEntity.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "Generic Lookup Error " + inputQueryParameters.LOB;
+                loggerUtility.LogInfoAsync(LogType.Warning, "Generic Lookup Data Null");
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("Policy Lookup Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    async void GetConfigurationData()
+    {
+        try
+        {
+            aceDataCollector.configLookupEntity = (await Http.GetFromJsonAsync<List<ConfigurationEntity>>($"{ApplicationConstants.UrlLookupconfiguration}{inputQueryParameters.LOB}"))?.ToList();
+            if (aceDataCollector.configLookupEntity == null || aceDataCollector.configLookupEntity.Count == 0)
+            {
+                aceDataCollector.errorDetails.Error = "Configuration Lookup service Error";
+                loggerUtility.LogInfoAsync(LogType.Warning, "Config Lookup Data is empty");
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("Configuration Lookup service Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    async Task GetSourceSystemData()
+    {
+        try
+        {
+            ShowSpinner();
+            var details = new SourceSystemInputRequest
+                {
+                    PolicyNumber = inputQueryParameters.PolicyNumber,
+                    AccountNumber = inputQueryParameters.AccountNumber,
+                    ClaimNumber = inputQueryParameters.ClaimNumber,
+                    ProducerCode = inputQueryParameters.ProducerCode,
+                    QuoteNumber = inputQueryParameters.QuoteNumber,
+                    LOB = inputQueryParameters.LOB,
+                    Environment = inputQueryParameters.Env,
+                    CurrentUserId = inputQueryParameters.UserDetails.UserID,
+                    AsOfDate = string.IsNullOrEmpty(inputQueryParameters?.AsOfDate) ? DateTime.MinValue : DateTime.Parse(inputQueryParameters?.AsOfDate),
+                    URL = string.Empty
+                };
+            loadingError = true;
+            aceDataCollector.baseUri = navManager.BaseUri;
+            tempSourceSystemEntity = await GetSourceSystemData(details);
+            aceDataCollector.SourceSystemEntity = tempSourceSystemEntity;
+            if (aceDataCollector.SourceSystemEntity == null)
+            {
+                aceDataCollector.errorDetails.Error = "ESB Data is Empty.";
+                loggerUtility.LogInfoAsync(LogType.Error, aceDataCollector.errorDetails.Error);
+                return;
+            }
+            else if (!string.IsNullOrEmpty(aceDataCollector.SourceSystemEntity.ErroCode) || !string.IsNullOrEmpty(aceDataCollector.SourceSystemEntity.ErroDiscription))
+            {
+                aceDataCollector.errorDetails.Error = $"{aceDataCollector.SourceSystemEntity.ErroCode} - {aceDataCollector.SourceSystemEntity.ErroDiscription}";
+                loggerUtility.LogInfoAsync(LogType.Warning, aceDataCollector.errorDetails.Error);
+                return;
+            }
+            else
+            {
+                loadingError = false;
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("ESB service Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+            StateHasChanged();
+        }
+    }
+    async Task<SourceSystemBaseEntity> GetSourceSystemData(SourceSystemInputRequest details)
+    {
+        var response = await Http.PostAsJsonAsync<SourceSystemInputRequest>(ApplicationConstants.UrlExternalServiceEsb, details);
+        switch (details.LOB.ToUpper())
+        {
+            case ApplicationConstants.LOB_PC_CA:
+            case ApplicationConstants.LOB_PC_BOP:
+            case ApplicationConstants.LOB_PC_CGL:
+            case ApplicationConstants.LOB_PC_CUMB:
+                return await response.Content.ReadFromJsonAsync<CLSourceSystemEntity>();
+            case ApplicationConstants.LOB_PC_MULTI:
+                return await response.Content.ReadFromJsonAsync<PCMultiSourceSystemEntity>();
+            case ApplicationConstants.LOB_BC_PA:
+            case ApplicationConstants.LOB_BC_WCU:
+                return await response.Content.ReadFromJsonAsync<BCSourceSystemEntity>();
+            case ApplicationConstants.LOB_PC_WCU:
+                return await response.Content.ReadFromJsonAsync<PCWCUSourceSystemEntity>();
+            case ApplicationConstants.LOB_PC_UMB:
+            case ApplicationConstants.LOB_PC_HO:
+            case ApplicationConstants.LOB_PC_DW:
+                return await response.Content.ReadFromJsonAsync<PLSourceSystemEntity>();
+            case ApplicationConstants.LOB_PC_PA:
+                return await response.Content.ReadFromJsonAsync<PLAutoSourceSystemEntity>();
+            case ApplicationConstants.LOB_WCC:
+                return await response.Content.ReadFromJsonAsync<WCCSourceSystemEntity>();
+            case ApplicationConstants.LOB_GC:
+                return await response.Content.ReadFromJsonAsync<GCSourceSystemEntity>();
+            default:
+                return null;
+        }
+    }
+
+    async Task GetUserData()
+    {
+        try
+        {
+            var user = await Http.GetFromJsonAsync<AdhocCorrespondenceEditor.Shared.UserData>(ApplicationConstants.UrlUser);
+            loggerUtility.LogInfoAsync(LogType.Information, $"user IsAuthericated : {user?.IsAuthericated}"); // TempLog
+
+            if (user == null && !user.IsAuthericated)
+            {
+                loggerUtility.LogInfoAsync(LogType.Warning, "Invalid User");
+                navManager.NavigateTo("./Public/AccessDenied.html", true);
+                return;
+            }
+            urlInteractive = await Http.GetStringAsync(ApplicationConstants.UrlLookupGetWebServiceSearch);
+            loggerUtility.LogInfoAsync(LogType.Information, $"url Interactive : {urlInteractive}"); // TempLog
+            inputQueryParameters.UserDetails = new Client.UserData
+                {
+                    UserName = user.UserName,
+                    UserRoles = user.UserRoles ?? string.Empty,
+                    UserInitials = user.UserInital,
+                    UserID = user.UserID,
+                    UserEmail = user.UserEmail
+                };
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("Get User Data service Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool rendered = false;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(inputQueryParameters.UserDetails?.UserName) && !rendered)
+        {
+            rendered = true;
+            notifyUser.InvokeAsync(inputQueryParameters.UserDetails.UserName);
+        }
+    }
+
+    async void OnCategoryChanged(object myArgs)
+    {
+        ClearDocuments();
+        selectedList.Clear();
+        DisableEnableControls(true);
+        foreach (var cntl in components)
+            cntl.Reset();
+        try
+        {
+            CategoryId = int.Parse(myArgs.ToString());
+            if (!loadingError)
+            {
+                aceDataCollector.documentList = (await Http.GetFromJsonAsync<List<DocumentEntity>>($"{ApplicationConstants.UrlReferenceDataDocument}{CategoryId}/")).OrderBy(x => x.DocumentFriendlyName)?.ToList();
+                var ruleModel = RunClientRules();
+                aceDataCollector.documentList = aceDataCollector.documentList.Where(x => ((x.BaseState == null) || (ruleModel.State != null && x.BaseState.ToUpper().Contains(ruleModel.State.ToUpper())) || (x.BaseState.ToUpper() == ruleModel.Location?.ToUpper()))).ToList();
+                aceDataCollector.documentData.documentEntity = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("Error getting documents for the Category");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        StateHasChanged();
+    }
+    RuleModel RunClientRules()
+    {
+        var RuleModel = new RuleModel(
+                                  inputQueryParameters.LOB,
+                                  aceDataCollector,
+                                  CategoryId,
+                                  DocumentId,
+                                  RuleGroup.ClientRule,
+                                  inputQueryParameters.PolicyNumber,
+                                  inputQueryParameters.QuoteNumber,
+                                  inputQueryParameters.AccountNumber);
+        RuleModel.State = inputQueryParameters.State;
+        RuleManager.Run(RuleModel, aceDataCollector.ruleEntity, aceDataCollector.ruleLookupEntity, aceDataCollector.baseUri); // execute the rules
+        return RuleModel;
+    }
+    async void OnDocumentChanged(object myArgs)
+    {
+        ClearDocuments();
+        selectedList.Clear();
+        if (myArgs != null)
+        {
+            try
+            {
+                DocumentId = int.Parse(myArgs.ToString());
+                loggerUtility.LogInfoAsync(LogType.Information, $"Document ID: {DocumentId}"); // TempLog
+                aceDataCollector.documentData.documentControlList = await Http.GetFromJsonAsync<List<DocumentControlEntity>>($"{ApplicationConstants.UrlReferenceDataDocumentcontrol}{DocumentId}/");
+                aceDataCollector.documentData.documentControlList = aceDataCollector.documentData.documentControlList?.OrderBy(x => x.ControlOrder)?.ToList();
+                loggerUtility.LogInfoAsync(LogType.Information, $"Doc control List count : {aceDataCollector.documentData.documentControlList?.Count}"); // TempLog
+                aceDataCollector.documentData.documentEntity = aceDataCollector.documentList.Where(x => x.DocumentId == DocumentId).FirstOrDefault();
+
+                if (aceDataCollector.documentData.documentControlList == null || aceDataCollector.documentData.documentControlList?.Count == 0)
+                {
+                    BuiltErrorMsg("Document controls not configured for this Document.");
+                    DisableEnableControls(true);
+                    StateHasChanged();
+                    return;
+                }
+                RunClientRules();
+                if (!string.IsNullOrEmpty(aceDataCollector?.documentData?.documentEntity?.DocumentFriendlyName))
+                    headingDisplay = displayOptionStatus.DisplayText + "  Document: " + aceDataCollector?.documentData?.documentEntity?.DocumentFriendlyName;
+
+                bool taskLoaded = await CheckSpecialCondition();
+                aceDataCollector.documentData.DocumentChildControlEntity = await Http.GetFromJsonAsync<List<DocumentDropdownChildControlEntity>>($"{ApplicationConstants.UrlLookupDataDocumentChildcontrol}{DocumentId}/");
+                loggerUtility.LogInfoAsync(LogType.Information, $"Doc child control List count : {aceDataCollector.documentData.DocumentChildControlEntity?.Count}"); // TempLog
+
+                StateHasChanged();
+                if (!taskLoaded)
+                {
+                    DisableEnableControls(true);
+                    return;
+                }
+                await ShowDocumentOnScreen();
+            }
+            catch (Exception ex)
+            {
+                BuiltErrorMsg("Error in Document controls");
+                loggerUtility.LogInfoAsync(LogType.Error, ex);
+            }
+        }
+        else
+        {
+            DisableEnableControls(true);
+            StateHasChanged();
+        }
+    }
+
+    async Task ShowDocumentOnScreen()
+    {
+        foreach (var control in aceDataCollector.documentData?.documentControlList)
+            selectedList.Add(Type.GetType($"AdhocCorrespondenceEditor.Client.Shared.{control.ControlName.Trim()}"));
+
+        DisableEnableControls(selectedList.Count > 0 ? false : true);
+        if (aceDataCollector.LOBName?.ToUpper() != ApplicationConstants.LOB_WCC)
+        {
+            string URL = string.Empty;
+            if (aceDataCollector.LOBName?.ToUpper() == ApplicationConstants.LOB_GC )
+            {
+                if(!string.IsNullOrEmpty(aceDataCollector.documentData.documentEntity.DocumentOtherType))
+                    URL = $"{ApplicationConstants.UrlExternalserviceOnbase}gc/{aceDataCollector.documentData.documentEntity.DocumentOtherType}";
+
+            }
+            else
+            {
+                URL = $"{ApplicationConstants.UrlExternalserviceOnbase}{aceDataCollector.documentData.documentEntity.DocumentType}";
+            }
+            if (!string.IsNullOrEmpty(URL))
+            {
+                var documntOnbaseDetails = await Http.GetFromJsonAsync<int>(URL);
+                if (documntOnbaseDetails == 0)
+                {
+                    aceDataCollector.errorDetails.Error = "We’re sorry, an error occurred while getting (OnBase)Document id.";
+                    StateHasChanged();
+                    return;
+                }
+                if (documntOnbaseDetails != null)
+                    aceDataCollector.documentData.DocumentOnbaseID = documntOnbaseDetails.ToString();
+            }
+        }
+    }
+
+    async void SendData()
+    {
+        OnEditClick(true);
+    }
+
+    async void OpenSample()
+    {
+        OnPreviewClick();
+    }
+
+    async void GetInputXML()
+    {
+        try
+        {
+            var emptyNamespaces = new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty });
+            var type = aceDataCollector.SourceSystemEntity.GetType();
+            var serializer = new XmlSerializer(type);
+            var settings = new XmlWriterSettings();
+            settings.Indent = true;
+            settings.OmitXmlDeclaration = true;
+            ShowSpinner();
+            using (var stream = new StringWriter())
+            using (var writer = XmlWriter.Create(stream, settings))
+            {
+                serializer.Serialize(writer, aceDataCollector.SourceSystemEntity, emptyNamespaces);
+                var xmlString = stream.ToString();
+                await JSRuntime.InvokeVoidAsync("OpenXML", xmlString, "Source System to ACE Data");
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+        }
+    }
+
+    async void GetOutputXML()
+    {
+        aceDataCollector.OnClick(false);
+
+        OutputBase userSelection = aceDataCollector.UserSelection;
+        SourceSystemBaseEntity sourceSystemData = aceDataCollector.SourceSystemEntity;
+        try
+        {
+            ShowSpinner();
+            using (var inspireBuilder = (new InspireDirector()).GetInspireBuilder(inputQueryParameters.LOB, inputQueryParameters.ProducerCode))
+            {
+                var response = await inspireBuilder.ProcessPreview(Http, loggerUtility, inputQueryParameters, userSelection, sourceSystemData, aceDataCollector);
+                await JSRuntime.InvokeVoidAsync("OpenXML", response, "ACE to Interactive Data");
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+        finally
+        {
+            HideSpinner();
+        }
+    }
+
+    void ClearDocuments()
+    {
+        if (!loadingError)
+            aceDataCollector.errorDetails = new ErrorDetails();
+        aceDataCollector.documentData = new DocumentDetails();
+        headingDisplay = displayOptionStatus.DisplayText;
+        hideGetTransaction = true;
+    }
+
+    async void OnEditClick(bool isValidate = false)
+    {
+        try
+        {
+            aceDataCollector.errorDetails.IsInValid = false;
+            aceDataCollector.OnClick(isValidate);
+            if (aceDataCollector.errorDetails.IsInValid)
+            {
+                if (string.IsNullOrEmpty(aceDataCollector.errorDetails.Error))
+                    aceDataCollector.errorDetails.Error = "Please enter all the mandatory(*) fields";
+                return;
+            }
+            aceDataCollector.errorDetails.Error = String.Empty;
+            OutputBase userSelection = aceDataCollector.UserSelection;
+            SourceSystemBaseEntity sourceSystemData = aceDataCollector.SourceSystemEntity;
+            ShowSpinner();
+            using (var inspireBuilder = (new InspireDirector()).GetInspireBuilder(inputQueryParameters.LOB, inputQueryParameters.ProducerCode))
+            {
+                var response = await inspireBuilder.ProcessPublish(Http, loggerUtility, inputQueryParameters, userSelection, sourceSystemData, aceDataCollector);
+                if (response.Contains("http")) // Inspire Call succeded
+                {
+                    if (saveDocDetailsInDB)
+                        PostDocumentLog(userSelection, inspireBuilder.Payload);
+                    JSRuntime.InvokeVoidAsync("open", CancellationToken.None, response + "#viewMode=edit", "_blank");
+                }
+                else // Inspire call failed
+                {
+                    aceDataCollector.errorDetails.Error = response;
+                    loggerUtility.LogInfoAsync(LogType.Error, string.Format("Exception occured while publishing Inspire Service::Response=> {0} Payload=> {1}", response, inspireBuilder.Payload));
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, "Exception occured while publishing Inspire Service: " + ex);
+            aceDataCollector.errorDetails.Error = "Exception occured while publishing Inspire Service.";
+        }
+        finally
+        {
+            HideSpinner(1000);
+        }
+    }
+
+    async void OnPreviewClick()
+    {
+        try
+        {
+            ShowSpinner();
+            aceDataCollector.OnClick(false);
+            var previewURL = (await Http.GetFromJsonAsync<WebServiceEntity>($"{ApplicationConstants.UrlLookupWebservice}{inputQueryParameters.LOB}/SampleUrl/{inputQueryParameters.Env}"));
+
+            OutputBase userSelection = aceDataCollector.UserSelection;
+            SourceSystemBaseEntity sourceSystemData = aceDataCollector.SourceSystemEntity;
+
+            using (var inspireBuilder = (new InspireDirector()).GetInspireBuilder(inputQueryParameters.LOB, inputQueryParameters.ProducerCode))
+            {
+                var inspireClientId = appSetting.InspireClientId;
+                var inspireClientSecret = appSetting.InspireClientSecret;
+                var response = await inspireBuilder.ProcessPreview(Http, loggerUtility, inputQueryParameters, userSelection, sourceSystemData, aceDataCollector);
+                await JSRuntime.InvokeVoidAsync("OpenSample", previewURL.URL, response, inspireClientId, inspireClientSecret);
+            }
+        }
+        catch (Exception ex)
+        {
+            loggerUtility.LogInfoAsync(LogType.Error, "Exception occured while processing Open Sample Inspire Service: " + ex);
+        }
+        finally
+        {
+            HideSpinner(2500);
+        }
+    }
+    async void OpenSearch()
+    {
+        JSRuntime.InvokeVoidAsync("open", CancellationToken.None, urlInteractive, "_blank");
+    }
+
+    async Task<bool> CheckSpecialCondition()
+    {
+        hideGetTransaction = true;
+        switch (inputQueryParameters.LOB.ToUpper())
+        {
+            case ApplicationConstants.LOB_BC_PA:
+            case ApplicationConstants.LOB_BC_WCU:
+                switch (aceDataCollector.documentData.documentEntity.DocumentFriendlyName)
+                {
+                    case ApplicationConstants.Doc_Manual_Invoice:
+                        await GetESBDataManual(true);
+                        break;
+                    case ApplicationConstants.Doc_Policyholder_Accounting_Statement:
+                        hideGetTransaction = false;
+                        return false;
+                    default:
+                        if (savedSourceSystemData && tempSourceSystemEntity != null)
+                        {
+                            aceDataCollector.SourceSystemEntity = tempSourceSystemEntity;
+                            savedSourceSystemData = false;
+                        }
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    async void GetESBData()
+    {
+        aceDataCollector.errorDetails = new ErrorDetails();
+        selectedList.Clear();
+        DisableEnableControls(selectedList.Count > 0 ? false : true);
+        var result = await GetESBDataManual(false);
+        if (result)
+            ShowDocumentOnScreen();
+    }
+
+    async Task<bool> GetESBDataManual(bool isManual = false)
+    {
+        try
+        {
+            ShowSpinner();
+            var details = new SourceSystemInputRequest
+                {
+                    PolicyNumber = inputQueryParameters.PolicyNumber,
+                    AccountNumber = inputQueryParameters.AccountNumber,
+                    ClaimNumber = inputQueryParameters.ClaimNumber,
+                    ProducerCode = inputQueryParameters.ProducerCode,
+                    QuoteNumber = inputQueryParameters.QuoteNumber,
+                    LOB = inputQueryParameters.LOB,
+                    Environment = inputQueryParameters.Env,
+                    AsOfDate = string.IsNullOrEmpty(inputQueryParameters?.AsOfDate) ? DateTime.MinValue : DateTime.Parse(inputQueryParameters?.AsOfDate),
+                    IsItUseDates = !isManual,
+                    IsManualInvoice = true,
+                    URL = string.Empty,
+                    CurrentUserId=inputQueryParameters.UserDetails?.UserID ?? string.Empty
+                };
+            if (!isManual)
+            {
+                details.StartDate = startDate;
+                details.EndDate = endDate;
+            }
+            var data = await GetSourceSystemData(details);
+            if (data == null)
+            {
+                loggerUtility.LogInfoAsync(LogType.Error, "ESB Data is Empty.");
+                return false;
+            }
+            else if (data.ErroCode != string.Empty)
+            {
+                aceDataCollector.errorDetails.Error = $"{data.ErroCode} - {data.ErroDiscription}";
+                loggerUtility.LogInfoAsync(LogType.Error, aceDataCollector.errorDetails.Error);
+                return false;
+            }
+            savedSourceSystemData = true;
+            aceDataCollector.SourceSystemEntity = data;
+        }
+        catch (Exception ex)
+        {
+            BuiltErrorMsg("ESB service Error");
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+            return false;
+        }
+        finally
+        {
+            HideSpinner();
+        }
+        return true;
+    }
+
+    async void PostDocumentLog(OutputBase userSelection, string payload)
+    {
+        var logDetail = new DocumentLogEntity
+            {
+                Environment = inputQueryParameters.Env,
+                PolicyNumber = inputQueryParameters.PolicyNumber,
+                AccountNumber = inputQueryParameters.AccountNumber,
+                ClaimNumber = inputQueryParameters.ClaimNumber,
+                ProducerCode = inputQueryParameters.ProducerCode,
+                QuoteNumber = inputQueryParameters.QuoteNumber,
+                LOB = inputQueryParameters.LOB,
+                BaseState = inputQueryParameters.State,
+                CreateDateTime = DateTime.Now,
+                UserID = inputQueryParameters.UserDetails.UserID,
+                LetterName = aceDataCollector.documentData.documentEntity.DocumentName,
+                Payload = payload,
+            };
+
+        var response = await Http.PostAsJsonAsync<DocumentLogEntity>(ApplicationConstants.UrlDocumentlog, logDetail);
+        try
+        {
+            var isSuccess = response.Content.ReadAsStringAsync().Result;
+            if (!isSuccess.Equals("1"))
+                loggerUtility.LogInfoAsync(LogType.Error, "PostDocumentLog failed to insert the record for #: " + logDetail.PolicyNumber + " Error:" + isSuccess);
+        }
+        catch (Exception ex)
+        {
+            aceDataCollector.errorDetails.Error = " Post DocumentLog Error";
+            loggerUtility.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+    void BuiltErrorMsg(string msg)
+    {
+        aceDataCollector.errorDetails.Error = string.IsNullOrEmpty(aceDataCollector.errorDetails.Error) ? msg : $" {msg} - {aceDataCollector.errorDetails.Error}";
+    }
+
+    void ShowSpinner()
+    {
+        spinner.Show();
+        StateHasChanged();
+    }
+
+    void HideSpinner(int milliSeconds = 200)
+    {
+        spinner.Stop(milliSeconds);
+        StateHasChanged();
+    }
+
+    void DisableEnableControls(bool disable)
+    {
+        displayOptionStatus.IsPublishDisabled = displayOptionStatus.IsXMLDisabled = disable;
+        StateHasChanged();
+
+    }
+}
+

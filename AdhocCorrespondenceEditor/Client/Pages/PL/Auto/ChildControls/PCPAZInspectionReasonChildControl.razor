@@ -1,0 +1,61 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@inject HttpClient Http
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+          <div class="row">
+                <div class="col-md-3">
+                   Inspection Reason
+                </div>
+                <div class="col-md-4">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@InspectionReason Change=@(args => OnReasonChanged(args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    [Parameter]
+    public string Reason { get; set; }
+    IEnumerable<DocumentDropdownLookupDataEntity>  InspectionReason;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            InspectionReason = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(InspectionReason), LookupData.documentData.documentEntity.DocumentId)}/"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((PLPAUserEntity)LookupData.UserSelection).InspectionReason = reasonValue;
+
+    }
+    public string reasonValue;
+    public async void OnReasonChanged(object myArgs)
+    {
+        reasonValue = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+    }
+
+}

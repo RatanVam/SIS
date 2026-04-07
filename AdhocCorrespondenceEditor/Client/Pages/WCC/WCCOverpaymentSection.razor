@@ -1,0 +1,120 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Overpayment Information
+    </div> 
+    <div class="panel-body">
+          <div class="row">
+  <div class="col-md-3">Overpayment Reason(s):</div>
+  <div class="col-md-8">
+        @foreach(var reason in reasonsOverpaymentWCC)
+        {
+            <div class="row col-md-12" >
+                <RadzenSwitch Change="@(args => OnAddTreatmentReasonChanged(args, @reason.DocumentDropdownLookupItemValue))" Style="margin-right:3px"/>  @reason.DocumentDropdownLookupItemCode  
+            </div>
+        }
+        <div class="row">
+         <div class="col-md-5">
+           <RadzenSwitch @bind-Value=@isOtherReasonSelected Style="margin-right:3px"/> Other Overpayment Reason:</div>
+              <div class="col-md-7">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(otherReasonsOverpayment, firstRendeValue || !isOtherReasonSelected)" @bind-Value=@otherReasonsOverpayment Disabled ="@(!isOtherReasonSelected)" MaxLength="150" Style="width: 100%; max-width: 300px;"/>
+              </div>
+        </div>
+        </div></div>
+            <div class="row">
+                <div class="col-md-3">
+                   Overpayment Type:
+                </div>
+                <div class="col-md-8">
+                     <div class="row">
+                    <RadzenDropDown class="DropDownSize300"   TValue="string" Data=@typeOverpaymentWCC Change=@(args => OnReasonChanged(args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                     </div>
+                    @foreach (var item in selectedList)
+                    {          
+                        <div class="row">
+                             <DynamicComponent Type="item" Parameters="@Parameters"  />
+                        </div>
+                    }
+                </div>
+            </div>
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    List<DocumentDropdownLookupDataEntity>  reasonsOverpaymentWCC = new ();
+    List<DocumentDropdownLookupDataEntity>  typeOverpaymentWCC = new ();
+    List<string> reasons = new();
+
+    bool isOtherReasonSelected = true;
+    string otherReasonsOverpayment = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", reason);
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsOverpaymentWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsOverpaymentWCC), LookupData.documentData.documentEntity.DocumentId)}/"));
+        typeOverpaymentWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(typeOverpaymentWCC), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            ((WCCUserEntity)LookupData.UserSelection).OverPaymentReason = new();
+            ((WCCUserEntity)LookupData.UserSelection).OverPaymentReason.AddRange(reasons);
+            ((WCCUserEntity)LookupData.UserSelection).OverPaymentOther = isOtherReasonSelected ? otherReasonsOverpayment : string.Empty;
+            ((WCCUserEntity)LookupData.UserSelection).OverPaymentType = reason;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void OnAddTreatmentReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+    string reason = string.Empty;
+    List<Type> selectedList= new ();
+
+    void OnReasonChanged(object myArgs)
+    {
+        var reasonDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        selectedList.Clear();
+        StateHasChanged();
+        var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, myArgs == null ? 0 : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemId);
+        foreach (var childControl in childControlList)
+        {
+            Parameters["Reason"] = reasonDetails;
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+}

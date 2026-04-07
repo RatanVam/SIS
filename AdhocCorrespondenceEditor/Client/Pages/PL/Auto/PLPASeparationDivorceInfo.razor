@@ -1,0 +1,83 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Separation Divorce
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   Separation-Divorce info
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@reasonList Change=@(args => OnReasonChanged(args))  AllowClear=true  Placeholder="--Select--" >
+                        <Template> @($"{context.DocumentDropdownLookupItemCode}") </Template> </RadzenDropDown>
+                </div>
+            </div>
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    <div class="col-md-9"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+
+    IEnumerable<DocumentDropdownLookupDataEntity>  reasonList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", reason);
+        try
+        {
+            reasonList = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{LookupData.documentData.documentEntity.DocumentId}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonList), LookupData.documentData.documentEntity.DocumentId)}/"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        ((PLPAUserEntity)LookupData.UserSelection).SpouseDivorceInfo = reason;
+    }
+
+    string reason= string.Empty;
+    List<Type> selectedList= new ();
+    public async void OnReasonChanged(object myArgs)
+    {
+        var reasonDetails = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemCode;
+        reason = myArgs == null ? string.Empty : ((DocumentDropdownLookupDataEntity)myArgs).DocumentDropdownLookupItemValue;
+        selectedList.Clear();
+        StateHasChanged();
+        var childControlList = ApplicationClassUtility.GetChildControl(LookupData.documentData.DocumentChildControlEntity, reasonDetails);
+        foreach (var childControl in childControlList)
+        {
+            Parameters["Reason"] = reasonDetails;
+            selectedList.Add(Type.GetType($"{ApplicationConstants.ClientPagesNamespace}{childControl}"));
+        }
+    }
+
+}

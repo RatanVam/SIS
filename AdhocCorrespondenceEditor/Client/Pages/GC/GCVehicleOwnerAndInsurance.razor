@@ -1,0 +1,108 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Vehicle Owner
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Vehicle Owner's Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="VehicleOwnerName"  class=@($"{LookupData.GetTextColorClass(partyID, firstRendeValue)} DropDownSize")  TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                   * Vehicle Owner's Insurer:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown id="VehicleInsurer"  class=@($"{LookupData.GetTextColorClass(partyInsurerID, firstRendeValue)} DropDownSize")  TValue="PartyAddressUI" Data=@partyListInsurer TextProperty="DisplayName" ValueProperty="PartyID" Change=@(args => OnPartyInsurereChanged(args)) AllowClear=true  Placeholder="--Select--" />
+                    <span class="alert-dangerMsg" hidden="@(partyListInsurer.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    List<PartyAddressUI> partyList = new();
+    List<PartyAddressUI> partyListInsurer = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string primaryRolesExcept,claimantRoles ;
+            primaryRolesExcept = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(primaryRolesExcept), LookupData.documentData.documentEntity.DocumentId);
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles), LookupData.documentData.documentEntity.DocumentId);
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(primaryRolesExcept) && !string.IsNullOrEmpty(claimantRoles))
+            {
+                var partyRolesExcept = primaryRolesExcept.Split(',').ToList();
+                var partyRoles = claimantRoles.Split(',').ToList();
+                partyList = partyFullList.Where(x => !(x.PartyRoles.Any(partyRolesExcept.Contains)) && x.PartyRoles.Any(partyRoles.Contains))?.OrderBy(x=>x.DisplayName)?.ToList();
+            }
+
+            var partyFullListInsurer = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            if (!string.IsNullOrEmpty(primaryRolesExcept) )
+            {
+                var partyRolesExcept = primaryRolesExcept.Split(',').ToList();
+                var partyRoles = claimantRoles.Split(',').ToList();
+                partyListInsurer = partyFullListInsurer.Where(x => x.PartyRoles.Except(partyRoles).Count() > 0)?.OrderBy(x=>x.DisplayName)?.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+      bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    string partyID, partyInsurerID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        partyID = (myArgs == null) ? string.Empty : myArgs.ToString();
+    }
+    public async void OnPartyInsurereChanged(object myArgs)
+    {
+        partyInsurerID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID) || string.IsNullOrEmpty(partyInsurerID))
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+        if (!string.IsNullOrEmpty(partyID))
+            userSelection.VehicleOwnerName = partyList.Where(x => x.PartyID == partyID).FirstOrDefault()?.DisplayName;
+        if (!string.IsNullOrEmpty(partyInsurerID))
+            userSelection.VehicleOwnerAndInsuranceName = partyListInsurer.Where(x => x.PartyID == partyInsurerID).FirstOrDefault()?.DisplayName;
+    }
+
+}

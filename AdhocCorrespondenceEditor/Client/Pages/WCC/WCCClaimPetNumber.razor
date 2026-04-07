@@ -1,0 +1,247 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.WCC
+
+<div class="panel panel-primary">
+    <div class="panel-heading">Claim Petition Number(s)</div>
+    <div class="panel-body">
+        <div class="form-group">
+            <!--Re Section-->
+            @if (ShowInRe)
+            {
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>@(ReRequired ? "*" : "")Re Section Claim Petition Number(s): </label>
+                    </div>
+                    <div class="col-md-9">
+                        <!--Re Section Claim petition number checkbox list-->
+                        @foreach (var itemRe in numberDataRe)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenSwitch @bind-Value=@itemRe.IsChecked Change="@(args => selectedNumRe(args,itemRe))"  class="@LookupData.GetTextColorClass(ReRequired && ShowInRe && selectedDataRe.Count==0,firstRendeValue)"  Name="ClaimPetRe" Disabled="@(OnlyOne && !itemRe.IsChecked && selectedDataRe.Count >= 1)" />
+                                <RadzenLabel Text=@itemRe.CaseNumber Component="ClaimPetRe" />
+
+                            </RadzenStack>
+                        }
+                        <span class="alert-dangerMsg" hidden="@(numberDataRe.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                    </div>
+                </div>
+            }
+            <!--seperator space-->
+
+            <div class="row" style="margin-top:20px" hidden="@(!(ShowInRe && ShowInBody))">
+            </div>
+            <!--Body Section-->
+            <div class="row" hidden="@(!ShowInBody)">
+                <div class="row">
+                <div class="col-md-3">
+                    <label>@(BodyRequired?"*":"") Body Section Claim Petition Number(s):</label>
+                </div>
+                <div class="col-md-9">
+                    <!--Body Section Claim petition number checkbox list-->
+                    @foreach (var itemBody in numberDataBody)
+                    {
+                        <div class="row">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenSwitch @bind-Value=@itemBody.IsChecked Change="@(args => selectedNumBody(args,itemBody))"  class="@LookupData.GetTextColorClass(ReRequired && ShowInRe && selectedDataRe.Count==0,firstRendeValue)"  Name="ClaimPetBody" />
+
+                                <RadzenLabel Text=@itemBody.CaseNumber Component="ClaimPetBody" />
+
+                            </RadzenStack>
+
+                        </div>
+                    }
+                    <span class="alert-dangerMsg" hidden="@(numberDataBody.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+                </div>
+                 <div class="row">
+                <div class="col-md-3">
+                </div>
+                <div class="col-md-9">
+
+                    <RadzenTextBox @bind-Value=@ClaimPetNum id="ClaimPetNumberId" class="@LookupData.GetTextColorClass(selectedDataBody.Count == 0 && ShowClaimPetNumText && string.IsNullOrEmpty(ClaimPetNum), firstRendeValue)" hidden="@(!ShowClaimPetNumText)" MaxLength="100" />
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    public bool ShowInRe = true;
+    public bool ShowInBody = false;
+    public bool OutputToRe = true;
+    public bool OutputToBody = false;
+    public bool ReRequired = false;
+    public bool BodyRequired = false;
+    public bool OnlyOne = false;
+    public bool ShowClaimPetNumText = false;
+    List<ClaimPetCaseDetails> numberDataRe = new();
+    List<ClaimPetCaseDetails> numberDataBody = new();
+    public List<string> selectedDataRe = new();
+    public List<string> selectedDataBody = new();
+    public string ClaimPetNum;
+    class ClaimPetCaseDetails:ICloneable
+    {
+        public string CaseNumber { get; set; }
+        public bool IsChecked { get; set; }
+        public object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var ClaimPetNums = ((WCCSourceSystemEntity)LookupData.SourceSystemEntity)?.Claim?.Matters;
+            if (ClaimPetNums != null)
+            {
+                numberDataRe = ClaimPetNums.Select(x =>
+                    {
+                        if (!string.IsNullOrEmpty(x.CaseNumber))
+                            return new ClaimPetCaseDetails() { CaseNumber = x.CaseNumber, IsChecked = false };
+                        return null;
+                    }).Where(y => y != null).DistinctBy(x => x.CaseNumber).ToList();
+                numberDataBody = new List<ClaimPetCaseDetails>();
+                numberDataBody.AddRange(numberDataRe.Select(x => (ClaimPetCaseDetails)x.Clone()).ToList());
+            }
+
+            SetVisibility();
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+      bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    void SetVisibility()
+    {
+        var showInRe = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(ShowInRe), LookupData.documentData.documentEntity.DocumentId);
+        ShowInRe = string.IsNullOrEmpty(showInRe) ? true : Convert.ToBoolean(showInRe);
+
+        var showClaimPetNumText = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(ShowClaimPetNumText), LookupData.documentData.documentEntity.DocumentId);
+        ShowClaimPetNumText = string.IsNullOrEmpty(showClaimPetNumText) ? false : Convert.ToBoolean(showClaimPetNumText);
+
+        var showInBody = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(ShowInBody), LookupData.documentData.documentEntity.DocumentId);
+        ShowInBody = string.IsNullOrEmpty(showInBody) ? false : Convert.ToBoolean(showInBody);
+
+        var bodyRequired = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(BodyRequired), LookupData.documentData.documentEntity.DocumentId);
+        BodyRequired = string.IsNullOrEmpty(bodyRequired) ? false : Convert.ToBoolean(bodyRequired);
+
+        var reRequired = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(ReRequired), LookupData.documentData.documentEntity.DocumentId);
+        ReRequired = string.IsNullOrEmpty(reRequired) ? false : Convert.ToBoolean(reRequired);
+
+        var onlyOne = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(OnlyOne), LookupData.documentData.documentEntity.DocumentId);
+        OnlyOne = string.IsNullOrEmpty(onlyOne) ? false : Convert.ToBoolean(onlyOne);
+
+        OutputToBody = ShowInBody;
+       
+        var outputToRe = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(OutputToRe), LookupData.documentData.documentEntity.DocumentId);
+         OutputToRe = string.IsNullOrEmpty(outputToRe) ? true : Convert.ToBoolean(outputToRe);
+
+        // adjust for the exceptions to the above defaults
+        switch (LookupData.documentData.documentEntity.CategoryName)
+        {
+            case "WCC_LEGAL":
+                OutputToBody = true;
+                break;
+            default:
+                //use the defaults
+                break;
+        }
+    }
+
+    void selectedNumRe(bool isChecked, ClaimPetCaseDetails numItem)
+    {
+
+        if (isChecked)
+        {
+            selectedDataRe.Add(numItem.CaseNumber);
+        }
+        else
+        {
+            selectedDataRe.Remove(numItem.CaseNumber);
+        }
+
+        if (OnlyOne)
+        {
+            foreach (var data in numberDataRe)
+            {
+                if (numItem.CaseNumber != data.CaseNumber && numItem.IsChecked)
+                {
+                    data.IsChecked = false;
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    void selectedNumBody(bool isChecked, ClaimPetCaseDetails numItem)
+    {
+
+        if (isChecked)
+        {
+            selectedDataBody.Add(numItem.CaseNumber);
+        }
+        else
+        {
+            selectedDataBody.Remove(numItem.CaseNumber);
+        }
+        StateHasChanged();
+    }
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (ReRequired && ShowInRe && selectedDataRe.Count == 0)
+        {
+            LookupData.errorDetails.IsInValid = true;
+        }
+        if (BodyRequired && ShowInBody && selectedDataBody.Count == 0 && string.IsNullOrEmpty(ClaimPetNum))
+        {
+            LookupData.errorDetails.IsInValid = true;
+        }
+        if (selectedDataBody.Count == 0 && ShowClaimPetNumText)
+        {
+            LookupData.errorDetails.IsInValid = true;
+        }
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+
+        if (OutputToRe)
+        {
+            userSelection.ClaimPetNum = String.Join(", ", ShowInRe ? selectedDataRe : selectedDataBody);
+        }
+
+        if (OutputToBody)
+        {
+            userSelection.ClaimPetNumList = ShowInBody ? selectedDataBody : selectedDataRe;
+            if (ShowClaimPetNumText)
+        {
+            userSelection.ClaimPetNumText = ClaimPetNum;
+        }
+        }
+
+        
+
+    }
+
+    }

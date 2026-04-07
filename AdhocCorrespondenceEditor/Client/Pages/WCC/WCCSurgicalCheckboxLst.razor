@@ -1,0 +1,86 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Surgical Information
+    </div> 
+    <div class="panel-body">
+        <div class="row">
+             <div class="col-md-6" style="margin-left:5px">
+            <RadzenSwitch @bind-Value=isSurgeryCommentsAdlInfo Style="margin-right:5px"/>Surgery Comments Additional Information:
+            </div>
+              <div class="col-md-5">
+        <RadzenTextBox class="@LookupData.GetTextColorClass(surgeryCommentsAdlInfo, firstRendeValue || !isSurgeryCommentsAdlInfo)" @bind-Value=@surgeryCommentsAdlInfo Disabled ="@(!isSurgeryCommentsAdlInfo)" Style="width: 100%; max-width: 300px;" MaxLength="150" />
+              </div>
+        </div>
+        @foreach(var reason in reasonsSurgicalWCC)
+        {<div class="row" style="margin-left:5px">
+                <RadzenSwitch Change="@(args => OnDenialReasonChanged(args, @reason.InspireTag))" Style="margin-right:5px"/>  @reason.DocumentDropdownLookupItemCode  
+          </div>
+       }
+
+    </div>
+  </div>
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<DocumentDropdownLookupDataEntity>  reasonsSurgicalWCC = new ();
+    List<string> reasons = new();
+
+    string surgeryCommentsAdlInfo = string.Empty;
+    bool isSurgeryCommentsAdlInfo = false;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+        reasonsSurgicalWCC = (await Http.GetFromJsonAsync<List<DocumentDropdownLookupDataEntity>>($"{ApplicationConstants.UrlDocumentDropDown}{LookupData.LOBName}/{ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(reasonsSurgicalWCC), LookupData.documentData.documentEntity.DocumentId)}/"));
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        try
+        {
+            if (isSurgeryCommentsAdlInfo && string.IsNullOrEmpty(surgeryCommentsAdlInfo))
+            {
+                LookupData.errorDetails.IsInValid = true;
+                return;
+            }
+            ((WCCUserEntity)LookupData.UserSelection).SurgicalLst = new();
+            foreach (var temp in reasonsSurgicalWCC)
+                ((WCCUserEntity)LookupData.UserSelection).SurgicalLst[temp.InspireTag] = false;
+            foreach (var temp in reasons)
+                ((WCCUserEntity)LookupData.UserSelection).SurgicalLst[temp] = true;
+            ((WCCUserEntity)LookupData.UserSelection).SurgeryCommentsAdditionalInformation = surgeryCommentsAdlInfo;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+    public async void OnDenialReasonChanged(bool isSelected, string myArgs)
+    {
+        if (isSelected)
+            reasons.Add(myArgs?.ToString());
+        else
+            reasons.Remove(myArgs?.ToString());
+    }
+
+}

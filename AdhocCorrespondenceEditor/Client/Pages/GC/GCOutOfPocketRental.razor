@@ -1,0 +1,92 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Out of Pocket Rental
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                <RadzenSwitch id="IncludeVehicle" @bind-Value=@isSelected />Include Vehicle:
+            </div>
+            <div class="col-md-9">
+                <RadzenDropDown id="InsuredVehicle" TValue="Vehicle" class="DropDownSize" Data=@vehicleList TextProperty="Make" Disabled ="@(!isSelected)"
+                ValueProperty="id" Change=@(args => OnInsuredVehicleChanged(args)) AllowClear=true  Placeholder="--Select--">
+                    <Template>
+                        @($"{context.Year} {context.Make} {context.Model}")        
+                    </Template>
+                </RadzenDropDown>
+                <span class="alert-dangerMsg" hidden="@(vehicleList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<Vehicle> vehicleList = new();
+    bool isSelected = false;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            vehicleList = (from row in  ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.InvolvedVehicles
+                           orderby  row.Year descending, row.Make descending, row.Model descending
+                           select row).ToList();
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    string selectedVehicleID;
+    public async void OnInsuredVehicleChanged(object myArgs)
+    {
+        try
+        {
+            selectedVehicleID= (myArgs == null)? string.Empty:myArgs.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var selectedVehicle = vehicleList.Where(x => x.id.ToString() == selectedVehicleID).FirstOrDefault();
+        var vehicle = ((GCUserEntity)LookupData.UserSelection).Vehicle;
+        ((GCUserEntity)LookupData.UserSelection).OutOfPocketRental = isSelected;
+        if (selectedVehicle != null && isSelected)
+        {
+            ((GCUserEntity)LookupData.UserSelection).Vehicle = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCVehicle
+                {
+                    Make = selectedVehicle?.Make,
+                    Model = selectedVehicle?.Model,
+                    Year = selectedVehicle?.Year
+                };
+        }
+    }
+
+}

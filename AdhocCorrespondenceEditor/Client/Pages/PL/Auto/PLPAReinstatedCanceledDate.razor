@@ -1,0 +1,127 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+          Policy Reinstated and Canceled Information
+    </div>
+        <div class="panel-body">
+
+        @foreach (var obj in policyDates)
+        {
+            <div class="row">
+                <div class="col-md-3">
+                    Reinstate In Force Date:  
+                </div>
+                <div class="col-md-4">
+                     <RadzenDatePicker @bind-Value=@obj.ReinstateInForceDate class="DropDownSize" DateFormat="yyyy-MM-dd" Change=@(args => ReinstateDateChanged(obj,args)) ShowCalendarWeek/>
+                </div>
+            </div>
+                        <div class="row">
+                <div class="col-md-3">
+                    Cancellation Date:  
+                </div>
+                <div class="col-md-4">
+                     <RadzenDatePicker @bind-Value=@obj.CancellationDate class="DropDownSize" DateFormat="yyyy-MM-dd" Change=@(args => CancellationDateChanged(obj,args)) ShowCalendarWeek/>
+                </div>
+            </div>
+            <hr />
+        }
+
+        <div class="col-md-12" style="margin-top: 15px">
+            <RadzenButton class="AddRemoveButtons"  Click=@AddNewCCSection Text="Add New" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount>maxRecords-1 ) />
+            <RadzenButton class="AddRemoveButtons"  Click=@RemoveCCSection Text="Remove" ButtonStyle="ButtonStyle.Secondary" hidden=@(indexCount==0)/>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    List<PolicyDates> policyDates = new List<PolicyDates>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (policyDates.Count == 0)
+            return;
+
+        try
+        {
+            var userDate = ((PLPAUserEntity)LookupData.UserSelection);
+            if (userDate.ReinstCancelDates == null)
+                userDate.ReinstCancelDates = new List<ReinstCancelDates>();
+            foreach (var obj in policyDates)
+            {
+
+                userDate.ReinstCancelDates.Add(new ReinstCancelDates
+                    {
+                        ReinstateDate = obj.ReinstateInForceDate.HasValue ? obj.ReinstateInForceDate.Value : DateTime.MinValue,
+                        CancelDate = obj.CancellationDate.HasValue ? obj.CancellationDate.Value : DateTime.MinValue
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+
+
+    public async void ReinstateDateChanged(PolicyDates claimObj, object myArgs)
+    {
+        claimObj.ReinstateInForceDate = myArgs == null? DateTime.MinValue:(DateTime)myArgs;
+    }
+        public async void CancellationDateChanged(PolicyDates claimObj, object myArgs)
+    {
+        claimObj.CancellationDate = myArgs == null? DateTime.MinValue:(DateTime)myArgs;
+    }
+
+    int indexCount = 0;
+    int maxRecords = 3;
+    public async void AddNewCCSection()
+    {
+        if (indexCount < maxRecords)
+        {
+            policyDates.Insert(indexCount,new PolicyDates());
+            indexCount = indexCount + 1;
+        }
+        StateHasChanged();
+    }
+
+    public async void RemoveCCSection()
+    {
+        if (indexCount > 0)
+        {
+            indexCount = indexCount - 1;
+            policyDates.RemoveAt(indexCount);
+
+        }   
+        StateHasChanged();
+    }
+
+    public class PolicyDates
+    {
+        public DateTime? ReinstateInForceDate { get; set; }
+        public DateTime? CancellationDate { get; set; }
+    }
+}

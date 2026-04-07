@@ -1,0 +1,187 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.GC
+@using System.Text.RegularExpressions
+@using System.Reflection
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Exposure Information
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                   * Exposure Name:
+                </div>
+                <div class="col-md-9">
+                     <RadzenDropDown Name="ExposureName" class="@LookupData.GetTextColorClass(partyID,firstRendeValue)" TValue="PartyAddressUI" Data=@partyList TextProperty="DisplayName" ValueProperty="PartyID" id="ExposureName"
+                    Change=@(args => OnPartyChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyList.Count > 0)">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-3">
+                  * Exposure Type:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown id="ExposureType" @ref="childComponent" Value=@partyExposureID  class="@LookupData.GetTextColorClass(partyExposureID.HasValue?bool.TrueString:null,firstRendeValue)" TValue="AdhocCorrespondenceEditor.Shared.GC.Exposure" Data=@partyExposure TextProperty="ExposureType" 
+                   ValueProperty="id"  Change=@(args => OnExposureChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(partyExposure.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+            <div class="row" >
+                <div class="col-md-3">
+                  Precert ID:
+                </div>
+                <div class="col-md-9">
+                   <RadzenDropDown Name="PrecertID" @ref="childComponentPrecert" Value=@precertificationID  TValue="AdhocCorrespondenceEditor.Shared.GC.Precertification" Data=@precertification TextProperty="PrecertificationId" id="PrecertId"
+                   ValueProperty="PrecertificationId"  Change=@(args => OnPrecertIDChanged(args)) AllowClear=true  Placeholder="--Select--"  Style="width: 100%; max-width: 400px;"/>
+                    <span class="alert-dangerMsg" hidden="@(precertification.Count > 0 || string.IsNullOrEmpty(partyID))">@ApplicationConstants.NoDataMsg</span>
+                </div>
+            </div>
+
+    </div>
+</div>
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure> childComponent { set => components.Add(value); }
+    List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>> components = new List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Exposure>>();
+
+    RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification> childComponentPrecert { set => componentsPrecert.Add(value); }
+    List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification>> componentsPrecert = new List<RadzenDropDown<AdhocCorrespondenceEditor.Shared.GC.Precertification>>();
+
+    List<PartyAddressUI> partyList = new();
+    List<Exposure> partyExposure = new List<Exposure>();
+    List<Precertification> precertification = new List<Precertification>();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<string> claimantRoles = new List<string>();
+            claimantRoles = ApplicationClassUtility.GetVariableText(LookupData.configLookupEntity, nameof(claimantRoles), LookupData.documentData.documentEntity.DocumentId)?.Split(',').ToList();
+            var partyFullList = (new MapperClass()).GetMappedObjects(LookupData.SourceSystemEntity);
+            partyList = partyFullList.Where(x => x.PartyRoles.Any(claimantRoles.Contains))?.OrderBy(x => x.DisplayName)?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+
+    string partyID,precertificationID = string.Empty;
+    int? partyExposureID;
+    public async void OnPartyChanged(object myArgs)
+    {
+        try
+        {
+            if (myArgs == null)
+            {
+                precertificationID = partyID = string.Empty;
+                partyExposure = new List<Exposure>();
+                partyExposureID = null;
+            }
+            else
+            {
+                partyID = myArgs.ToString();
+                partyExposure = ((GCSourceSystemEntity)LookupData.SourceSystemEntity).Claim.InvolvedParties.Where(x => x.id.ToString() == partyID).SelectMany(y => y.Exposures)?.OrderBy(y=>y.ExposureType)?.ToList();
+                partyExposureID = partyExposure?.Count == 1 ? partyExposure?.FirstOrDefault()?.id : null;
+
+            }
+            if (!partyExposureID.HasValue)
+            {
+                foreach (var cntl in components)
+                    cntl.Reset();
+            }
+            else
+            {
+                precertification = partyExposure.Where(x => x.id == partyExposureID).FirstOrDefault()?.Precertifications?.OrderByDescending(y => int.Parse(y.PrecertificationId))?.ToList(); 
+                precertificationID = precertification?.Count >0 ? precertification?.FirstOrDefault()?.PrecertificationId : string.Empty;
+                if (string.IsNullOrEmpty(precertificationID))
+                    foreach (var cntl in componentsPrecert)
+                        cntl.Reset();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+    }
+    public async void OnExposureChanged(object myArgs)
+    {
+        if (myArgs != null)
+        {
+            partyExposureID = (int)myArgs;
+            precertification = partyExposure?.Where(x => x.id == partyExposureID).FirstOrDefault()?.Precertifications?.OrderByDescending(y => int.Parse(y.PrecertificationId))?.ToList();
+            precertificationID = precertification?.Count > 0 ? precertification?.FirstOrDefault()?.PrecertificationId : string.Empty;
+        }
+        else
+        {
+            partyExposureID = null;
+            precertification = new List<Precertification>();
+            precertificationID = string.Empty;
+        }
+        if (string.IsNullOrEmpty(precertificationID))
+            foreach (var cntl in componentsPrecert)
+                cntl.Reset();
+    }
+    public async void OnPrecertIDChanged(object myArgs)
+    {
+        precertificationID = myArgs == null ? string.Empty : myArgs.ToString();
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (string.IsNullOrEmpty(partyID) || !partyExposureID.HasValue)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((GCUserEntity)LookupData.UserSelection);
+        var selectedParty = partyList.Where(x => x.PartyID == partyID).FirstOrDefault();
+        var exposure = partyExposure.Where(x => x.id == partyExposureID.Value).FirstOrDefault();
+        if (selectedParty != null)
+        {
+            userSelection.ExposureDetails = new AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.GCExposure();
+            userSelection.ExposureDetails.Name = selectedParty?.DisplayName;
+            userSelection.ExposureDetails.ClaimentID = selectedParty?.PartyID;
+            userSelection.ExposureDetails.ExposureType = exposure?.ExposureType; 
+            userSelection.ExposureDetails.ExposureNumber = exposure?.ExposureNumber;
+            userSelection.ExposureDetails.Deductible = exposure?.Deductible;
+            userSelection.ExposureDetails.JurisdictionState = exposure?.ExposureJurisdictionState;
+            userSelection.ExposureDetails.Represented = exposure?.Represented ?? false;
+        }
+        userSelection.PrecertDetails = new Precert
+            {
+                ID = precertificationID
+            };
+    }
+}

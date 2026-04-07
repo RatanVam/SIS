@@ -1,0 +1,43 @@
+﻿@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+@inject HttpClient Http
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Finance Agreement
+    </div>
+    <div class="panel-body">
+            @foreach (var item in selectedList)
+            {          
+                <div class="row">
+                    <div class="col-md-9"> <DynamicComponent Type="item" Parameters="@Parameters"  /> </div>
+                </div>
+            }
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+    List<Type> selectedList= new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Parameters.Add(ApplicationConstants.LookupData, LookupData);
+        Parameters.Add("Reason", "FIN_AGREE_IND");
+        selectedList.Add(Type.GetType($"AdhocCorrespondenceEditor.Client.Shared.PCPAVehicleSubChildControl"));
+    }
+
+}

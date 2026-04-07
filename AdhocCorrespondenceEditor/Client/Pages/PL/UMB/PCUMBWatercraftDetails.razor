@@ -1,0 +1,117 @@
+﻿@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PL
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+
+                    <div class="row">
+                <div class="col-md-3">
+                    Watercraft
+                </div>
+                 <div class="col-md-4">
+                     <RadzenDropDown class="DropDownSize300"   TValue="WatercraftExposure" Data=@watercraftList  ValueProperty="id" Change=@(args => OnAddressChanged(args)) AllowClear=true  Placeholder="--Select--" >
+                        <Template>
+                        @($"{context.Watercraft.ModelYearNr} {context.Watercraft.WatercraftTradeNm}")        
+                        </Template>
+                    </RadzenDropDown>
+                </div>
+                 <div class="col-md-4">
+                    <RadzenTextBox class="DropDownSize300"  @bind-Value=@addressValue Disabled ="@(!string.IsNullOrEmpty(selectedWatercarftID))" MaxLength="150" />
+                </div>
+            </div>
+
+                   <div class="row"><div class="col-md-3"></div> <div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@watercraftOwnership  Disabled =@GetDisabledStatus()/> Watercraft Ownership </div>
+                    <div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@watercraftType  Disabled =@GetDisabledStatus()/> Watercraft Type </div></div>
+                    <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@watercraftYear  Disabled =@GetDisabledStatus()/> Watercraft Year </div>
+                    <div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@watercraftMake  Disabled =@GetDisabledStatus()/> Watercraft Make </div></div>
+                    <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@watercraftLength  Disabled =@GetDisabledStatus()/> Watercraft Length </div>
+                    <div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@maxHorsepower  Disabled =@GetDisabledStatus()/> Max Horsepower </div></div>
+                    <div class="row"><div class="col-md-3"></div><div class="col-md-4"style="margin-top:5px"><RadzenSwitch @bind-Value=@underlyingPolicy  Disabled =@GetDisabledStatus()/> Underlying Policy </div></div>
+<hr />
+
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+    string selectedWatercarftID = string.Empty;
+    string addressValue = string.Empty;
+    IEnumerable<WatercraftExposure> watercraftList;
+    bool watercraftOwnership, watercraftType, watercraftYear, watercraftMake, watercraftLength, maxHorsepower, underlyingPolicy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            watercraftList = ((PLSourceSystemEntity)(LookupData.SourceSystemEntity)).PolicyData.Policy.PolicyPeriod.PolicyLines.SelectMany(x => x.UmbrellaLine.WatercraftExposures);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var userSelection = ((PLHoUmbDwUserEntity)LookupData.UserSelection);
+        if (userSelection.WatercarftInfoDetails == null)
+            userSelection.WatercarftInfoDetails = new();
+        if (string.IsNullOrEmpty(selectedWatercarftID) && string.IsNullOrEmpty(addressValue?.Trim()))
+            return;
+        AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity.WatercarftInfoDetail tempWatercarftDetail = new();
+        if (string.IsNullOrEmpty(selectedWatercarftID))
+        {
+            tempWatercarftDetail.WatercraftDetails = addressValue?.Trim();
+        }
+        else
+        {
+            var selectedWatercarf = watercraftList.Where(x => x.id == selectedWatercarftID).FirstOrDefault();
+            tempWatercarftDetail.WatercraftDetails = $"{selectedWatercarf.Watercraft.ModelYearNr} {selectedWatercarf.Watercraft.WatercraftTradeNm}";
+        }
+        tempWatercarftDetail.WatercraftOwnership = watercraftOwnership;
+        tempWatercarftDetail.WatercraftType = watercraftType;
+        tempWatercarftDetail.WatercraftYear = watercraftYear;
+        tempWatercarftDetail.WatercraftMake = watercraftMake;
+        tempWatercarftDetail.WatercraftLength = watercraftLength;
+        tempWatercarftDetail.MaxHorsepower = maxHorsepower;
+        tempWatercarftDetail.UnderlyingPolicy = underlyingPolicy;
+
+        userSelection.WatercarftInfoDetails.Add(tempWatercarftDetail);
+    }
+
+    public async void OnAddressChanged(object myArgs)
+    {
+        selectedWatercarftID = myArgs == null ? string.Empty : myArgs.ToString();
+        if(!string.IsNullOrEmpty(selectedWatercarftID))
+            addressValue = string.Empty;
+        else
+            ResetRadioButtons();
+    }
+    public async void OnTextChanged(object myArgs)
+    {
+        if (string.IsNullOrEmpty(selectedWatercarftID)&& string.IsNullOrEmpty(addressValue) )
+        ResetRadioButtons();
+    }
+    async void ResetRadioButtons()
+    {
+        watercraftOwnership= watercraftType= watercraftYear= watercraftMake= watercraftLength= maxHorsepower= underlyingPolicy = false;
+    }
+    bool GetDisabledStatus()
+    {
+        return string.IsNullOrEmpty(selectedWatercarftID) && string.IsNullOrEmpty(addressValue);
+    }
+
+
+}

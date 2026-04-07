@@ -1,0 +1,66 @@
+﻿@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Date Of Service
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3">
+                * Date Of Service:
+            </div>
+            <div class="col-md-6">
+                <RadzenDatePicker  @bind-Value=@serviceDate DateFormat="MMMM dd, yyyy" Placeholder="MM/DD/YYYY"  class=@($"{@LookupData.GetTextColorClass(serviceDate == null, firstRendeValue)} DropDownSize") />
+            </div>
+        </div>
+         <div class="row">
+            <div class="col-md-3">
+                * Time Of Service:
+            </div>
+            <div class="col-md-6">
+                <RadzenDatePicker @bind-Value=@serviceTime DateFormat="hh:mm tt" Placeholder="hh:mm am/pm" ShowTime="true" HourFormat="12" TimeOnly="true" class=@($"{@LookupData.GetTextColorClass(serviceTime == null, firstRendeValue)} DropDownSize") />
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+@code {
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    DateTime? serviceDate,serviceTime;
+    protected override async Task OnInitializedAsync()
+    {
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+    bool firstRendeValue = true;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        firstRendeValue = firstRender;
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        if (serviceDate == null || serviceTime == null)
+        {
+            LookupData.errorDetails.IsInValid = true;
+            return;
+        }
+        var userSelection = ((WCCUserEntity)LookupData.UserSelection);
+        userSelection.DateOfService = serviceDate;
+        userSelection.TimeOfService = serviceTime;
+
+    }
+
+
+}

@@ -1,0 +1,88 @@
+﻿@using AdhocCorrespondenceEditor.Client
+@using AdhocCorrespondenceEditor.Client.Common
+@using AdhocCorrespondenceEditor.Client.ControlClass
+@using AdhocCorrespondenceEditor.Client.PageHelper
+@using AdhocCorrespondenceEditor.Shared
+@using AdhocCorrespondenceEditor.Shared.DTO.UserInputEntity
+@using AdhocCorrespondenceEditor.Shared.PCPA
+@using static AdhocCorrespondenceEditor.Client.AceDataCollector
+@implements IAsyncDisposable
+@namespace AdhocCorrespondenceEditor.Client.Shared
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        Valid from Dates
+    </div>
+    <div class="panel-body">
+            <div class="row">
+                 <div class="col-md-3">
+                   Valid period:
+                </div>
+                <div class="col-md-6">
+                    <RadzenDropDown class="DropDownSize"   TValue="string" Data=@dateTimeDpdn Change=@(args => OnDriverChanged(args))  AllowClear=true  Placeholder="--Select--" />
+                           
+                </div>
+
+            </div>
+    </div>
+</div>
+@code {
+
+    public async ValueTask DisposeAsync()
+    {
+        LookupData.DocumentSubmitted -= new MyEventHandler(DocumentSubmitted);
+    }
+
+    [Parameter]
+    public AceDataCollector LookupData { get; set; }
+
+    [Parameter]
+    public LoggerUtility Logger { get; set; }
+
+    DateTime startDate, endDate, midDate;
+
+    List<string> dateTimeDpdn = new List<string>();
+    string selectedPeriod = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            startDate = ((PLAutoSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.StartDt;
+            endDate = ((PLAutoSourceSystemEntity)LookupData.SourceSystemEntity).PolicyData.Policy.PolicyPeriod.EndDt;
+            midDate = Utility.GetHalf(startDate);
+
+            dateTimeDpdn.Add($"{startDate.ToString("MM-dd-yyyy")} to {midDate.ToString("MM-dd-yyyy")} ");
+
+            var trigerDate = Utility.GetTriggerDate(startDate);
+            if(DateTime.Now >= trigerDate)
+                dateTimeDpdn.Add($"{midDate.ToString("MM-dd-yyyy")} to {endDate.ToString("MM-dd-yyyy")} ");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInfoAsync(LogType.Error, ex);
+        }
+        LookupData.DocumentSubmitted += new MyEventHandler(DocumentSubmitted);
+    }
+
+    void DocumentSubmitted(bool isValidate)
+    {
+        var index = dateTimeDpdn.IndexOf(selectedPeriod);
+        var userSelection = ((PLPAUserEntity)LookupData.UserSelection);
+        if (index == 0)
+        {
+            userSelection.IDCardValidFrom = startDate;
+            userSelection.IDCardValidTo = midDate;
+        }
+        else if (index == 1)
+        {
+            userSelection.IDCardValidFrom = midDate;
+            userSelection.IDCardValidTo = endDate;
+        }
+    }
+    public async void OnDriverChanged(object myArgs)
+    {
+        selectedPeriod = myArgs == null ? string.Empty : myArgs?.ToString();
+    }
+
+
+
+}
