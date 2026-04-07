@@ -79,13 +79,14 @@ namespace AdhocCorrespondenceEditor.Service.ServiceClass
         {
             try
             {
+                
                 retrieveInvoiceTransactions request = new ();
                 request.retrieveInvoiceTransactionsIn = new();
                 request.retrieveInvoiceTransactionsIn.PolicyNumber = Details.PolicyNumber;
 
                 request.retrieveInvoiceTransactionsIn.Header = new RequestHeader();
                 request.retrieveInvoiceTransactionsIn.Header.CorrelationContext = new CorrelationContext();
-                request.retrieveInvoiceTransactionsIn.Header.CorrelationContext.CorrelationId = helpers.guid.ToString();
+                request.retrieveInvoiceTransactionsIn.Header.CorrelationContext.CorrelationId = helpers.guid.ToString("D");
 
                 var client = new WCUBillingDataServiceClient(helpers.binding, helpers.endpointAddress);
                 var svcResponse = client.retrieveInvoiceTransactions(request);
